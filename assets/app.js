@@ -856,5 +856,10 @@ function escapeHtml(text) {
 }
 
 window.APP = APP; 
-document.addEventListener('DOMContentLoaded', () => APP.init());
-})();
+
+// 檢查：如果網頁早就載入完了，就直接啟動大腦；如果還沒，才等待載入完畢的事件
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => APP.init());
+} else {
+  APP.init();
+}
