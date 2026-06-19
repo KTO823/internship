@@ -1,511 +1,420 @@
 (() => {
-  const STORAGE_KEY = 'intern-dashboard-v3';
+  const STORAGE_KEY = 'intern-dashboard-v4';
   
   const APP = {
     state: {
-      user: { isLoggedIn: false, name: '' },
       startDate: '',
       endDate: '',
-      monthTarget: 160,
-      exchangeRate: 0.22,
-      expenseTotalJpy: 0,
-      punchRecords: {}, // { date: { records: [{ in: time, out: time }] } }
-      notes: [],
-      journals: [],
+      punchMode: 'realtime', // 'realtime' | 'manual'
+      hoursTargetMode: 'monthly', // 'monthly' | 'total'
+      hoursTarget: 160,
+      exchangeRate: 0.21,
+      
+      punchRecords: {}, // 日期: { records: [{in, out}], manualTotal: 0 }
+      expenses: [],     // { id, desc, amount, date }
+      notes: [],        // { id, text, date }
+      journals: [],     // { id, week, text, date }
       reminders: [
-        { id: 'r-1', title: '期末週誌繳交', date: formatDate(31), daysUntil: 31 },
-        { id: 'r-2', title: '實習影片完成', date: formatDate(90), daysUntil: 90 },
+        { id: 'r1', title: '期末週誌繳交', date: '' },
+        { id: 'r2', title: '實習影片完成', date: '' }
       ],
       checklist: [
-        { id: 'c-1', label: '填寫校外實習機構報到確認單', checked: false },
-        { id: 'c-2', label: '繳交登機證 / 報到單', checked: false },
-        { id: 'c-5', label: '繳交前期工作週誌', checked: false },
-        { id: 'c-6', label: '繳交實習影片', checked: false },
-        { id: 'c-9', label: '提交最終報告與滿意度', checked: false },
+        { id: 'c1', label: '填寫校外實習機構報到確認單', checked: false },
+        { id: 'c2', label: '繳交登機證 / 報到單', checked: false },
+        { id: 'c5', label: '繳交前期工作週誌', checked: false },
+        { id: 'c6', label: '繳交實習影片', checked: false },
+        { id: 'c9', label: '提交最終報告與滿意度', checked: false },
       ],
       quickExpenses: [
-        { label: '早餐', amount: 450 },
-        { label: '電車', amount: 180 },
-        { label: '超市', amount: 1200 },
+        { id: 'q1', label: '早餐', amount: 450 },
+        { id: 'q2', label: '電車', amount: 180 },
+        { id: 'q3', label: '超市', amount: 1200 },
       ],
     },
-    
-    currentPage: 'dashboard',
 
     init() {
       this.loadState();
       this.cacheDom();
-      this.setupEventListeners();
-      this.updateDateLabels();
-      this.render();
-      window.APP = this; // 將 APP 暴露給全域以供 onClick 呼叫
+      this.setupListeners();
+      this.fetchExchangeRate();
+      this.renderAll();
     },
 
     cacheDom() {
       this.dom = {
-        sidebarNav: document.querySelectorAll('.nav-item'),
-        mobileTabs: document.querySelectorAll('.tab-item'),
         pages: document.querySelectorAll('.page'),
-        menuToggles: document.querySelectorAll('.btn-menu'),
-        sidebar: document.querySelector('.desktop-sidebar'),
-
-        progressText: document.getElementById('progress-text'),
-        progressMain: document.getElementById('progress-main'),
-        progressHoursText: document.getElementById('progress-hours-text'),
-        progressHours: document.getElementById('progress-hours'),
-        progressExpenseText: document.getElementById('progress-expense-text'),
-        progressChecklistText: document.getElementById('progress-checklist-text'),
-        progressChecklist: document.getElementById('progress-checklist'),
-        dashReminders: document.getElementById('dash-reminders'),
-
-        hoursDisplay: document.getElementById('hours-display'),
-        hoursHint: document.getElementById('hours-hint'),
-        punchInBtn: document.getElementById('punch-in'),
-        punchOutBtn: document.getElementById('punch-out'),
-        makeupDate: document.getElementById('makeup-date'),
-        makeupInTime: document.getElementById('makeup-in-time'),
-        makeupOutTime: document.getElementById('makeup-out-time'),
-        makeupSubmit: document.getElementById('makeup-submit'),
-
-        expenseJpy: document.getElementById('expense-jpy'),
-        expenseNtd: document.getElementById('expense-ntd'),
-        expenseCustom: document.getElementById('expense-custom'),
-        expenseAdd: document.getElementById('expense-add'),
-        expenseQuickButtons: document.getElementById('expense-quick-buttons'),
-        expenseCustomize: document.getElementById('expense-customize'),
-        exchangeRate: document.getElementById('exchange-rate'),
-
-        quickNote: document.getElementById('quick-note'),
-        saveNote: document.getElementById('save-note'),
-        clearNote: document.getElementById('clear-note'),
+        navBtns: document.querySelectorAll('.nav-item, .tab-item'),
         
-        weekLabel: document.getElementById('week-label'),
-        weeklyJournal: document.getElementById('weekly-journal'),
-        saveJournal: document.getElementById('save-journal'),
-
-        reminderList: document.getElementById('reminder-list'),
-        newReminderTitle: document.getElementById('new-reminder-title'),
-        newReminderDate: document.getElementById('new-reminder-date'),
-        addReminder: document.getElementById('add-reminder'),
-        checklist: document.getElementById('checklist'),
-
-        settingsUser: document.getElementById('settings-user'),
-        settingsLogin: document.getElementById('settings-login'),
-        settingsLogout: document.getElementById('settings-logout'),
-        settingsStatus: document.getElementById('settings-status'),
-        settingsStart: document.getElementById('settings-start'),
-        settingsEnd: document.getElementById('settings-end'),
-        settingsHoursTarget: document.getElementById('settings-hours-target'),
-        dataExport: document.getElementById('data-export'),
-        dataImport: document.getElementById('data-import'),
-        dataReset: document.getElementById('data-reset'),
-        importFile: document.getElementById('import-file'),
-        sidebarUser: document.getElementById('sidebar-user'),
-        sidebarLogout: document.getElementById('sidebar-logout'),
-
-        // Modal elements
-        historyModal: document.getElementById('history-modal'),
+        // 設定區
+        setPunchMode: document.getElementById('settings-punch-mode'),
+        setHoursMode: document.getElementById('settings-hours-mode'),
+        setHoursTarget: document.getElementById('settings-hours-target'),
+        setStart: document.getElementById('settings-start'),
+        setEnd: document.getElementById('settings-end'),
+        
+        // 打卡區
+        secRealtime: document.getElementById('punch-realtime-section'),
+        secManual: document.getElementById('punch-manual-section'),
+        btnIn: document.getElementById('punch-in'),
+        btnOut: document.getElementById('punch-out'),
+        manualInput: document.getElementById('manual-hours-input'),
+        manualSubmit: document.getElementById('manual-hours-submit'),
+        todayPunchList: document.getElementById('today-punch-list'),
+        
+        // 記帳區
+        expDesc: document.getElementById('expense-custom-desc'),
+        expAmount: document.getElementById('expense-custom'),
+        expAdd: document.getElementById('expense-add'),
+        expQuickBox: document.getElementById('expense-quick-buttons'),
+        
+        // 模態框 (Modal)
+        modal: document.getElementById('modal-overlay'),
         modalClose: document.getElementById('modal-close'),
         modalTitle: document.getElementById('modal-title'),
         modalBody: document.getElementById('modal-body'),
       };
     },
 
-    setupEventListeners() {
-      this.dom.sidebarNav.forEach(btn => btn.addEventListener('click', () => this.changePage(btn.dataset.page)));
-      this.dom.mobileTabs.forEach(btn => btn.addEventListener('click', () => this.changePage(btn.dataset.page)));
-      this.dom.menuToggles.forEach(btn => btn.addEventListener('click', () => this.toggleSidebar()));
-
-      this.dom.punchInBtn.addEventListener('click', () => this.recordPunch('in'));
-      this.dom.punchOutBtn.addEventListener('click', () => this.recordPunch('out'));
-      this.dom.makeupSubmit.addEventListener('click', () => this.submitMakeup());
-
-      this.dom.expenseCustomize.addEventListener('click', () => this.showExpenseCustomizer());
-      this.dom.expenseAdd.addEventListener('click', () => {
-        const amount = parseFloat(this.dom.expenseCustom.value) || 0;
-        if (amount > 0) { this.addExpense(amount); this.dom.expenseCustom.value = ''; }
-      });
-
-      this.dom.saveNote.addEventListener('click', () => this.saveNoteItem());
-      this.dom.clearNote.addEventListener('click', () => this.dom.quickNote.value = '');
-      this.dom.saveJournal.addEventListener('click', () => this.saveJournalItem());
-      this.dom.addReminder.addEventListener('click', () => this.addReminderItem());
-
-      this.dom.settingsLogin.addEventListener('click', () => this.loginSettings());
-      this.dom.settingsLogout.addEventListener('click', () => this.logoutSettings());
-      this.dom.settingsStart.addEventListener('change', () => {
-        this.state.startDate = this.dom.settingsStart.value; this.saveState(); this.updateDashboard();
-      });
-      this.dom.settingsEnd.addEventListener('change', () => {
-        this.state.endDate = this.dom.settingsEnd.value; this.saveState(); this.updateDashboard();
-      });
-      this.dom.settingsHoursTarget.addEventListener('change', () => {
-        this.state.monthTarget = parseInt(this.dom.settingsHoursTarget.value) || 160;
-        this.saveState(); this.updateHoursDisplay();
-      });
-      this.dom.dataExport.addEventListener('click', () => this.exportData());
-      this.dom.dataImport.addEventListener('click', () => this.dom.importFile.click());
-      this.dom.importFile.addEventListener('change', (e) => this.importData(e));
-      this.dom.dataReset.addEventListener('click', () => {
-        if (confirm('確定重置？資料將被清空。')) { this.state = this.getDefaultState(); this.saveState(); this.render(); }
-      });
-      this.dom.sidebarLogout.addEventListener('click', () => this.logoutSettings());
-
-      // Modal close listener
-      this.dom.modalClose.addEventListener('click', () => this.dom.historyModal.close());
-    },
-
-    changePage(page) {
-      this.currentPage = page;
-      this.dom.pages.forEach(p => p.classList.remove('active'));
-      document.getElementById(`page-${page}`).classList.add('active');
-      this.dom.sidebarNav.forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
-      this.dom.mobileTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.page === page));
-      if (window.innerWidth < 1024 && this.dom.sidebar) this.dom.sidebar.style.display = 'none';
-    },
-
-    toggleSidebar() {
-      if (this.dom.sidebar) this.dom.sidebar.style.display = this.dom.sidebar.style.display === 'none' ? 'flex' : 'none';
-    },
-
-    updateDateLabels() {
-      const today = new Date().toISOString().slice(0, 10);
-      if (document.getElementById('punch-date-label')) {
-        document.getElementById('punch-date-label').textContent = `今日打卡控制台（${today}）`;
-      }
-      if (this.dom.makeupDate) this.dom.makeupDate.value = today;
-    },
-
-    // 歷史紀錄彈出視窗管理系統
-    openHistoryModal(type) {
-      this.dom.modalBody.innerHTML = '';
-      if (type === 'punch') {
-        this.dom.modalTitle.textContent = '打卡歷史紀錄管理';
-        const sortedDates = Object.keys(this.state.punchRecords).sort().reverse();
-        if(sortedDates.length === 0) this.dom.modalBody.innerHTML = '<p>尚無打卡紀錄</p>';
-        
-        sortedDates.forEach(date => {
-          const records = this.state.punchRecords[date].records;
-          records.forEach((rec, idx) => {
-            const card = document.createElement('div');
-            card.className = 'history-record-card';
-            card.innerHTML = `
-              <p><strong>${date}</strong></p>
-              <p>進：${rec.in} | 出：${rec.out || '未打卡'} ${rec.makeup ? '(補)' : ''}</p>
-              <div class="history-record-actions">
-                <button class="btn btn-sm secondary" onclick="APP.editRecord('${type}', '${date}', ${idx})">編輯</button>
-                <button class="btn btn-sm danger" onclick="APP.deleteRecord('${type}', '${date}', ${idx})">刪除</button>
-              </div>
-            `;
-            this.dom.modalBody.appendChild(card);
-          });
+    setupListeners() {
+      // 導覽切換
+      this.dom.navBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.dom.pages.forEach(p => p.classList.remove('active'));
+          this.dom.navBtns.forEach(b => b.classList.remove('active'));
+          document.getElementById(`page-${btn.dataset.page}`).classList.add('active');
+          document.querySelectorAll(`[data-page="${btn.dataset.page}"]`).forEach(b => b.classList.add('active'));
         });
-      } else if (type === 'note') {
-        this.dom.modalTitle.textContent = '備註歷史管理';
-        if(this.state.notes.length === 0) this.dom.modalBody.innerHTML = '<p>尚無備註紀錄</p>';
-        
-        [...this.state.notes].reverse().forEach((note, reverseIdx) => {
-          const actualIdx = this.state.notes.length - 1 - reverseIdx;
-          const card = document.createElement('div');
-          card.className = 'history-record-card';
-          card.innerHTML = `
-            <p style="color: var(--text-muted); font-size: 0.85rem;">${note.date}</p>
-            <p>${escapeHtml(note.text)}</p>
-            <div class="history-record-actions">
-              <button class="btn btn-sm secondary" onclick="APP.editRecord('${type}', null, ${actualIdx})">編輯</button>
-              <button class="btn btn-sm danger" onclick="APP.deleteRecord('${type}', null, ${actualIdx})">刪除</button>
-            </div>
-          `;
-          this.dom.modalBody.appendChild(card);
-        });
-      } else if (type === 'journal') {
-        this.dom.modalTitle.textContent = '週誌歷史管理';
-        if(this.state.journals.length === 0) this.dom.modalBody.innerHTML = '<p>尚無週誌紀錄</p>';
+      });
 
-        [...this.state.journals].reverse().forEach((journal, reverseIdx) => {
-          const actualIdx = this.state.journals.length - 1 - reverseIdx;
-          const card = document.createElement('div');
-          card.className = 'history-record-card';
-          card.innerHTML = `
-            <p><strong>第 ${journal.week} 週</strong> <span style="color:var(--text-muted); font-size: 0.85rem;">${journal.date}</span></p>
-            <p style="white-space: pre-wrap; max-height: 100px; overflow-y: auto;">${escapeHtml(journal.text)}</p>
-            <div class="history-record-actions">
-              <button class="btn btn-sm secondary" onclick="APP.exportSingleJournal(${actualIdx})">匯出</button>
-              <button class="btn btn-sm secondary" onclick="APP.editRecord('${type}', null, ${actualIdx})">編輯</button>
-              <button class="btn btn-sm danger" onclick="APP.deleteRecord('${type}', null, ${actualIdx})">刪除</button>
-            </div>
-          `;
-          this.dom.modalBody.appendChild(card);
-        });
-      }
-      this.dom.historyModal.showModal();
-    },
+      // 設定變更
+      this.dom.setPunchMode.addEventListener('change', (e) => { this.state.punchMode = e.target.value; this.saveState(); this.renderHoursPage(); });
+      this.dom.setHoursMode.addEventListener('change', (e) => { this.state.hoursTargetMode = e.target.value; this.saveState(); this.renderHoursPage(); this.updateDashboard(); });
+      this.dom.setHoursTarget.addEventListener('change', (e) => { this.state.hoursTarget = Number(e.target.value)||160; this.saveState(); this.renderHoursPage(); this.updateDashboard(); });
+      this.dom.setStart.addEventListener('change', (e) => { this.state.startDate = e.target.value; this.saveState(); this.updateDashboard(); });
+      this.dom.setEnd.addEventListener('change', (e) => { this.state.endDate = e.target.value; this.saveState(); this.updateDashboard(); });
 
-    deleteRecord(type, dateStr, index) {
-      if (!confirm('確定要刪除這筆紀錄嗎？')) return;
-      if (type === 'punch') {
-        this.state.punchRecords[dateStr].records.splice(index, 1);
-        if (this.state.punchRecords[dateStr].records.length === 0) delete this.state.punchRecords[dateStr];
-        this.updateHoursDisplay();
-      } else if (type === 'note') {
-        this.state.notes.splice(index, 1);
-      } else if (type === 'journal') {
-        this.state.journals.splice(index, 1);
-      }
-      this.saveState();
-      this.openHistoryModal(type); // 重新渲染視窗
-    },
+      // 打卡事件
+      this.dom.btnIn.addEventListener('click', () => this.handleRealtimePunch('in'));
+      this.dom.btnOut.addEventListener('click', () => this.handleRealtimePunch('out'));
+      this.dom.manualSubmit.addEventListener('click', () => this.handleManualPunch());
 
-    editRecord(type, dateStr, index) {
-      if (type === 'punch') {
-        const rec = this.state.punchRecords[dateStr].records[index];
-        const newIn = prompt('修改上班時間 (HH:MM)', rec.in);
-        if (newIn !== null) rec.in = newIn;
-        const newOut = prompt('修改下班時間 (HH:MM) - 若未下班請留空', rec.out || '');
-        if (newOut !== null) rec.out = newOut || null;
-        this.updateHoursDisplay();
-      } else if (type === 'note') {
-        const rec = this.state.notes[index];
-        const newText = prompt('編輯備註內容', rec.text);
-        if (newText) rec.text = newText;
-      } else if (type === 'journal') {
-        const rec = this.state.journals[index];
-        const newText = prompt('編輯週誌內容', rec.text);
-        if (newText) rec.text = newText;
-      }
-      this.saveState();
-      this.openHistoryModal(type); // 重新渲染視窗
-    },
+      // 記帳事件
+      this.dom.expAdd.addEventListener('click', () => {
+        const amount = Number(this.dom.expAmount.value);
+        const desc = this.dom.expDesc.value.trim() || '自訂支出';
+        if (amount > 0) { this.addExpenseRecord(desc, amount); this.dom.expAmount.value = ''; this.dom.expDesc.value = ''; }
+      });
 
-    exportSingleJournal(index) {
-      const journal = this.state.journals[index];
-      const previewHtml = `<html><head><title>週誌預覽</title><style>body{font-family:sans-serif;padding:32px;line-height:1.6;}h1{font-size:24px;}p{white-space:pre-wrap;}</style></head><body><h1>第 ${journal.week} 週週誌</h1><p>${escapeHtml(journal.text)}</p></body></html>`;
-      const win = window.open('', '_blank');
-      if (win) { win.document.write(previewHtml); win.document.close(); }
-      else { alert('請允許瀏覽器彈出視窗'); }
-    },
+      // 備註與週誌
+      document.getElementById('save-note').addEventListener('click', () => {
+        const text = document.getElementById('quick-note').value.trim();
+        if(text) { this.state.notes.push({ id: Date.now(), text, date: this.getNowString() }); document.getElementById('quick-note').value=''; this.saveState(); alert('備註已儲存'); }
+      });
+      document.getElementById('save-journal').addEventListener('click', () => {
+        const text = document.getElementById('weekly-journal').value.trim();
+        if(text) { this.state.journals.push({ id: Date.now(), week: this.getWeekNum(), text, date: this.getNowString() }); document.getElementById('weekly-journal').value=''; this.saveState(); alert('週誌已儲存'); }
+      });
 
-    recordPunch(type) {
-      const today = new Date().toISOString().slice(0, 10);
-      const now = new Date();
-      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      // 提醒事項新增
+      document.getElementById('add-reminder').addEventListener('click', () => {
+        const title = document.getElementById('new-reminder-title').value.trim();
+        const date = document.getElementById('new-reminder-date').value;
+        if(title && date) { this.state.reminders.push({ id: Date.now().toString(), title, date }); this.saveState(); this.renderReminders(); }
+      });
 
-      if (!this.state.punchRecords[today]) this.state.punchRecords[today] = { records: [] };
-      const todayRecords = this.state.punchRecords[today].records;
-
-      if (type === 'in') todayRecords.push({ in: timeStr, out: null });
-      else if (type === 'out' && todayRecords.length > 0) todayRecords[todayRecords.length - 1].out = timeStr;
+      // 管理按鈕 (開啟 Modal)
+      document.getElementById('btn-manage-punch').addEventListener('click', () => this.openModal('punch'));
+      document.getElementById('btn-manage-expense').addEventListener('click', () => this.openModal('expense'));
+      document.getElementById('btn-edit-quick-expense').addEventListener('click', () => this.openModal('quickExpense'));
+      document.getElementById('btn-manage-note').addEventListener('click', () => this.openModal('note'));
+      document.getElementById('btn-manage-journal').addEventListener('click', () => this.openModal('journal'));
       
-      this.saveState();
-      this.updateHoursDisplay();
-      alert(type === 'in' ? '已打卡上班' : '已打卡下班');
+      // Modal 關閉
+      this.dom.modalClose.addEventListener('click', () => this.dom.modal.classList.remove('active'));
     },
 
-    submitMakeup() {
-      const date = this.dom.makeupDate.value;
-      const inTime = this.dom.makeupInTime.value;
-      const outTime = this.dom.makeupOutTime.value;
-      if (!date || !inTime || !outTime) return alert('請完整填寫');
+    getNowString() { return new Date().toLocaleString('zh-Hant', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }); },
+    getTodayStr() { return new Date().toISOString().slice(0, 10); },
+    getWeekNum() { return this.state.startDate ? Math.floor((new Date() - new Date(this.state.startDate)) / 86400000 / 7) + 1 : '未設定'; },
 
-      if (!this.state.punchRecords[date]) this.state.punchRecords[date] = { records: [] };
-      this.state.punchRecords[date].records.push({ in: inTime, out: outTime, makeup: true });
-
-      this.saveState();
-      this.updateHoursDisplay();
-      this.dom.makeupInTime.value = ''; this.dom.makeupOutTime.value = '';
-      alert('補打卡成功');
+    // --- 打卡邏輯 ---
+    handleRealtimePunch(type) {
+      const today = this.getTodayStr();
+      const timeStr = new Date().toTimeString().slice(0,5);
+      if(!this.state.punchRecords[today]) this.state.punchRecords[today] = { records: [], manualTotal: 0 };
+      
+      const recs = this.state.punchRecords[today].records;
+      if(type === 'in') recs.push({ in: timeStr, out: null });
+      else if(type === 'out' && recs.length) recs[recs.length-1].out = timeStr;
+      
+      this.saveState(); this.renderHoursPage();
+    },
+    
+    handleManualPunch() {
+      const hours = Number(this.dom.manualInput.value);
+      if(hours > 0) {
+        const today = this.getTodayStr();
+        if(!this.state.punchRecords[today]) this.state.punchRecords[today] = { records: [], manualTotal: 0 };
+        this.state.punchRecords[today].manualTotal = hours; // 覆蓋今日總手動時數
+        this.saveState(); this.renderHoursPage(); this.dom.manualInput.value = ''; alert('今日總時數已紀錄！');
+      }
     },
 
-    getTotalHours() {
+    calcTotalHours() {
       let total = 0;
-      Object.values(this.state.punchRecords).forEach(dayRecords => {
-        dayRecords.records.forEach(rec => {
-          if (rec.out) {
-            const [inH, inM] = rec.in.split(':').map(Number);
-            const [outH, outM] = rec.out.split(':').map(Number);
-            total += Math.max(0, (outH * 60 + outM) - (inH * 60 + inM)) / 60;
-          }
-        });
+      Object.values(this.state.punchRecords).forEach(day => {
+        if (day.manualTotal > 0) { total += day.manualTotal; }
+        else if (day.records) {
+          day.records.forEach(r => {
+            if(r.out) {
+              const [ih, im] = r.in.split(':').map(Number); const [oh, om] = r.out.split(':').map(Number);
+              total += Math.max(0, (oh*60+om) - (ih*60+im)) / 60;
+            }
+          });
+        }
       });
       return total;
     },
 
-    addExpense(amount) {
-      this.state.expenseTotalJpy += amount;
-      this.saveState();
-      this.updateExpensesDisplay();
-      this.updateDashboard();
-      if (navigator.vibrate) navigator.vibrate(20);
-    },
-
-    showExpenseCustomizer() {
-      const label = prompt('快速記帳標籤（如：早餐）'); if (!label) return;
-      const amount = parseFloat(prompt('金額（JPY）')); if (isNaN(amount) || amount <= 0) return;
-      this.state.quickExpenses.push({ label, amount });
-      this.saveState(); this.renderQuickExpenses();
-    },
-
-    renderQuickExpenses() {
-      this.dom.expenseQuickButtons.innerHTML = '';
-      this.state.quickExpenses.forEach((exp, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'btn-expense';
-        btn.textContent = `${exp.label} ¥${Math.round(exp.amount)}`;
-        btn.addEventListener('click', () => this.addExpense(exp.amount));
-        
-        let pressTimer;
-        btn.addEventListener('mousedown', () => {
-          pressTimer = window.setTimeout(() => {
-            if (confirm(`刪除「${exp.label}」？`)) { this.state.quickExpenses.splice(idx, 1); this.saveState(); this.renderQuickExpenses(); }
-          }, 800);
-        });
-        btn.addEventListener('mouseup', () => clearTimeout(pressTimer));
-        btn.addEventListener('mouseleave', () => clearTimeout(pressTimer));
-        this.dom.expenseQuickButtons.appendChild(btn);
-      });
+    // --- 記帳邏輯 ---
+    addExpenseRecord(desc, amount) {
+      this.state.expenses.push({ id: Date.now(), desc, amount, date: this.getNowString() });
+      this.saveState(); this.renderExpenses();
     },
 
     async fetchExchangeRate() {
       try {
         const res = await fetch('https://open.er-api.com/v6/latest/JPY');
         const data = await res.json();
-        if (data?.rates?.TWD) {
-          this.state.exchangeRate = data.rates.TWD;
-          if (this.dom.exchangeRate) this.dom.exchangeRate.value = this.state.exchangeRate.toFixed(4);
-          this.saveState(); this.updateExpensesDisplay();
+        if (data?.rates?.TWD) { this.state.exchangeRate = data.rates.TWD; this.saveState(); this.renderExpenses(); }
+      } catch (e) {}
+    },
+
+    // --- 渲染畫面 ---
+    renderAll() {
+      // 填入設定初始值
+      this.dom.setPunchMode.value = this.state.punchMode;
+      this.dom.setHoursMode.value = this.state.hoursTargetMode;
+      this.dom.setHoursTarget.value = this.state.hoursTarget;
+      this.dom.setStart.value = this.state.startDate;
+      this.dom.setEnd.value = this.state.endDate;
+      
+      this.renderHoursPage();
+      this.renderExpenses();
+      this.renderReminders();
+      this.renderChecklist();
+      this.updateDashboard();
+    },
+
+    renderHoursPage() {
+      // 根據設定切換顯示區塊
+      if(this.state.punchMode === 'manual') {
+        this.dom.secRealtime.style.display = 'none'; this.dom.secManual.style.display = 'block';
+      } else {
+        this.dom.secRealtime.style.display = 'block'; this.dom.secManual.style.display = 'none';
+      }
+
+      // 顯示今日打卡摘要
+      const today = this.getTodayStr();
+      const todayData = this.state.punchRecords[today];
+      this.dom.todayPunchList.innerHTML = '<p style="margin:0; font-size:0.9rem; color:var(--text-muted);">今日狀態：</p>';
+      if(todayData) {
+        if(todayData.manualTotal > 0) {
+          this.dom.todayPunchList.innerHTML += `<strong>已手動紀錄 ${todayData.manualTotal} 小時</strong>`;
+        } else {
+          todayData.records.forEach(r => {
+            this.dom.todayPunchList.innerHTML += `<div>進: ${r.in} - 出: ${r.out || '進行中'}</div>`;
+          });
         }
-      } catch (e) { console.warn('匯率更新失敗'); }
+      } else { this.dom.todayPunchList.innerHTML += '尚未記錄'; }
+
+      // 計算總時數與目標
+      const total = this.calcTotalHours();
+      document.getElementById('hours-display').textContent = total.toFixed(1);
+      
+      const targetLabel = this.state.hoursTargetMode === 'total' ? '總工時目標' : '月度工時目標';
+      document.getElementById('hours-target-label').textContent = targetLabel;
+      document.getElementById('hours-hint').textContent = `目標 ${this.state.hoursTarget} 小時`;
+      
+      // 更新儀表板
+      const pct = Math.min(100, Math.round((total / this.state.hoursTarget) * 100));
+      document.getElementById('progress-hours-text').textContent = `${total.toFixed(1)}/${this.state.hoursTarget} 小時`;
+      document.getElementById('progress-hours').style.width = `${pct}%`;
     },
 
-    updateExpensesDisplay() {
-      if (this.dom.expenseJpy) this.dom.expenseJpy.textContent = `￥${Math.round(this.state.expenseTotalJpy)}`;
-      const ntd = Math.round(this.state.expenseTotalJpy * this.state.exchangeRate);
-      if (this.dom.expenseNtd) this.dom.expenseNtd.textContent = `NT$${ntd}`;
-      if (this.dom.progressExpenseText) this.dom.progressExpenseText.textContent = `￥${Math.round(this.state.expenseTotalJpy)} / NT$${ntd}`;
-    },
+    renderExpenses() {
+      // 計算當月/總支出
+      const totalJpy = this.state.expenses.reduce((sum, e) => sum + e.amount, 0);
+      const totalNtd = Math.round(totalJpy * this.state.exchangeRate);
+      
+      document.getElementById('expense-jpy').textContent = `￥${totalJpy}`;
+      document.getElementById('expense-ntd').textContent = `NT$${totalNtd}`;
+      document.getElementById('progress-expense-text').textContent = `￥${totalJpy} / NT$${totalNtd}`;
 
-    saveNoteItem() {
-      const text = this.dom.quickNote.value.trim(); if (!text) return;
-      this.state.notes.push({ text, date: new Date().toLocaleString('zh-Hant', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' }) });
-      this.dom.quickNote.value = ''; this.saveState(); alert('備註已保存');
-    },
-
-    addReminderItem() {
-      const title = this.dom.newReminderTitle.value.trim();
-      const date = this.dom.newReminderDate.value;
-      if (!title || !date) return;
-      this.state.reminders.push({ id: Date.now().toString(), title, date });
-      this.dom.newReminderTitle.value = ''; this.dom.newReminderDate.value = '';
-      this.saveState(); this.renderReminders();
+      // 渲染快捷鍵
+      this.dom.expQuickBox.innerHTML = '';
+      this.state.quickExpenses.forEach(q => {
+        const btn = document.createElement('button'); btn.className = 'btn-expense';
+        btn.textContent = `${q.label} ￥${q.amount}`;
+        btn.addEventListener('click', () => this.addExpenseRecord(q.label, q.amount));
+        this.dom.expQuickBox.appendChild(btn);
+      });
     },
 
     renderReminders() {
-      this.dom.reminderList.innerHTML = '';
-      this.state.reminders.forEach(reminder => {
-        const div = document.createElement('div'); div.className = 'reminder-item';
-        const days = Math.ceil((new Date(reminder.date) - new Date()) / 86400000);
-        div.innerHTML = `<p class="reminder-item-title">${escapeHtml(reminder.title)}</p><p class="reminder-item-meta">${reminder.date} • ${days < 0 ? '已過期' : days === 0 ? '今天' : days + ' 天'}</p>`;
-        this.dom.reminderList.appendChild(div);
+      const list = document.getElementById('dash-reminders');
+      const fullList = document.getElementById('reminder-list');
+      list.innerHTML = ''; fullList.innerHTML = '';
+
+      this.state.reminders.forEach((r, idx) => {
+        const d = Math.ceil((new Date(r.date) - new Date()) / 86400000);
+        const status = d < 0 ? '已過期' : d === 0 ? '今天截止' : `剩 ${d} 天`;
+        
+        // 儀表板用
+        if(idx < 3) list.innerHTML += `<div class="reminder-item"><div class="reminder-text"><h4>${escapeHtml(r.title)}</h4><p>${status}</p></div></div>`;
+        
+        // 檢查表頁面用 (帶編輯/刪除)
+        const row = document.createElement('div'); row.className = 'reminder-item';
+        row.innerHTML = `<div class="reminder-text"><h4>${escapeHtml(r.title)}</h4><p>${r.date} (${status})</p></div>
+          <div>
+            <button class="btn-icon" style="color:var(--primary);" onclick="APP.editReminder(${idx})">✏️</button>
+            <button class="btn-icon" style="color:var(--danger);" onclick="APP.deleteItem('reminders', ${idx})">🗑️</button>
+          </div>`;
+        fullList.appendChild(row);
       });
     },
 
     renderChecklist() {
-      this.dom.checklist.innerHTML = '';
-      this.state.checklist.forEach(item => {
-        const label = document.createElement('label'); label.className = 'checklist-item';
-        label.innerHTML = `<input type="checkbox" ${item.checked ? 'checked' : ''} /><span>${escapeHtml(item.label)}</span>`;
-        label.querySelector('input').addEventListener('change', e => { item.checked = e.target.checked; this.saveState(); this.updateDashboard(); });
-        this.dom.checklist.appendChild(label);
+      const cl = document.getElementById('checklist'); cl.innerHTML = '';
+      let checked = 0;
+      this.state.checklist.forEach(c => {
+        if(c.checked) checked++;
+        const lbl = document.createElement('label'); lbl.className = 'checklist-item';
+        lbl.innerHTML = `<input type="checkbox" ${c.checked?'checked':''}><span>${escapeHtml(c.label)}</span>`;
+        lbl.querySelector('input').addEventListener('change', e => { c.checked = e.target.checked; this.saveState(); this.updateDashboard(); });
+        cl.appendChild(lbl);
       });
-    },
-
-    saveJournalItem() {
-      const text = this.dom.weeklyJournal.value.trim(); if (!text) return;
-      this.state.journals.push({ week: this.getWeekNumber() || '未設定', text, date: new Date().toLocaleString('zh-Hant') });
-      this.dom.weeklyJournal.value = ''; this.saveState(); alert('週誌已保存');
-    },
-
-    loginSettings() {
-      const username = this.dom.settingsUser.value.trim(); if (!username) return;
-      this.state.user = { isLoggedIn: true, name: username }; this.saveState(); this.updateLoginStatus();
-    },
-
-    logoutSettings() {
-      if (confirm('確定要登出？')) { this.state.user = { isLoggedIn: false, name: '' }; this.saveState(); this.updateLoginStatus(); }
-    },
-
-    updateLoginStatus() {
-      const { isLoggedIn, name } = this.state.user;
-      this.dom.settingsStatus.textContent = isLoggedIn ? `已登入：${name}` : '未登入';
-      this.dom.sidebarUser.textContent = isLoggedIn ? name : '未登入';
-    },
-
-    exportData() {
-      const blob = new Blob([JSON.stringify(this.state, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = `intern-backup-${new Date().toISOString().slice(0,10)}.json`; a.click();
-    },
-
-    importData(event) {
-      const file = event.target.files?.[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        try { this.state = { ...this.getDefaultState(), ...JSON.parse(e.target.result) }; this.saveState(); this.render(); alert('匯入成功'); } 
-        catch { alert('檔案格式錯誤'); }
-      }; reader.readAsText(file);
-    },
-
-    updateHoursDisplay() {
-      const total = this.getTotalHours();
-      const pct = Math.min(100, Math.round((total / this.state.monthTarget) * 100));
-      if (this.dom.hoursDisplay) this.dom.hoursDisplay.textContent = total.toFixed(1);
-      if (this.dom.hoursHint) this.dom.hoursHint.textContent = `目標 ${this.state.monthTarget} 小時`;
-      if (this.dom.progressHoursText) this.dom.progressHoursText.textContent = `${total.toFixed(1)}/${this.state.monthTarget} 小時`;
-      if (this.dom.progressHours) this.dom.progressHours.style.width = `${pct}%`;
+      document.getElementById('progress-checklist-text').textContent = `${checked}/${this.state.checklist.length} 項`;
+      document.getElementById('progress-checklist').style.width = `${Math.round((checked/this.state.checklist.length)*100)}%`;
     },
 
     updateDashboard() {
-      const { startDate, endDate } = this.state;
-      if (startDate && endDate) {
-        const total = Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000);
-        const passed = Math.ceil((new Date() - new Date(startDate)) / 86400000);
-        const pct = Math.min(100, Math.max(0, Math.round((passed / total) * 100)));
-        if (this.dom.progressText) this.dom.progressText.textContent = `${pct}%`;
-        if (this.dom.progressMain) this.dom.progressMain.style.width = `${pct}%`;
+      if(this.state.startDate && this.state.endDate) {
+        const total = Math.max(1, Math.ceil((new Date(this.state.endDate) - new Date(this.state.startDate)) / 86400000));
+        const passed = Math.max(0, Math.ceil((new Date() - new Date(this.state.startDate)) / 86400000));
+        const pct = Math.min(100, Math.round((passed / total) * 100));
+        document.getElementById('progress-text').textContent = `${pct}%`;
+        document.getElementById('progress-main').style.width = `${pct}%`;
       }
-      
-      const chkPct = Math.round((this.state.checklist.filter(c => c.checked).length / this.state.checklist.length) * 100);
-      if (this.dom.progressChecklistText) this.dom.progressChecklistText.textContent = `${this.state.checklist.filter(c => c.checked).length}/${this.state.checklist.length} 項`;
-      if (this.dom.progressChecklist) this.dom.progressChecklist.style.width = `${chkPct}%`;
-
-      this.dom.dashReminders.innerHTML = '';
-      this.state.reminders.slice(0, 3).forEach(r => {
-        const d = Math.ceil((new Date(r.date) - new Date()) / 86400000);
-        this.dom.dashReminders.innerHTML += `<div class="reminder-item"><p class="reminder-item-title">${escapeHtml(r.title)}</p><p class="reminder-item-meta">${d < 0 ? '已過期' : d + ' 天'}</p></div>`;
-      });
     },
 
-    getWeekNumber() {
-      return this.state.startDate ? Math.floor((new Date() - new Date(this.state.startDate)) / 86400000 / 7) + 1 : null;
+    // --- 萬用彈出視窗 (Modal) 管理系統 ---
+    openModal(type) {
+      this.dom.modal.classList.add('active');
+      this.dom.modalBody.innerHTML = '';
+
+      if (type === 'punch') {
+        this.dom.modalTitle.textContent = '打卡歷史紀錄';
+        Object.keys(this.state.punchRecords).sort().reverse().forEach(date => {
+          const day = this.state.punchRecords[date];
+          const div = document.createElement('div'); div.className = 'history-card';
+          let html = `<p><strong>${date}</strong></p>`;
+          if(day.manualTotal > 0) html += `<p>手動時數: ${day.manualTotal} 小時</p>`;
+          else day.records.forEach((r, i) => { html += `<p>進: ${r.in} | 出: ${r.out||'--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">改</button></p>`; });
+          html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`;
+          div.innerHTML = html; this.dom.modalBody.appendChild(div);
+        });
+
+      } else if (type === 'expense') {
+        this.dom.modalTitle.textContent = '記帳明細歷史';
+        [...this.state.expenses].reverse().forEach((e, revIdx) => {
+          const idx = this.state.expenses.length - 1 - revIdx;
+          const div = document.createElement('div'); div.className = 'history-card';
+          div.innerHTML = `<p style="color:gray;font-size:0.8rem;">${e.date}</p><p><strong>${escapeHtml(e.desc)}</strong>：￥${e.amount}</p>
+            <div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('expenses', ${idx}, 'expense')">刪除</button></div>`;
+          this.dom.modalBody.appendChild(div);
+        });
+
+      } else if (type === 'quickExpense') {
+        this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
+        this.state.quickExpenses.forEach((q, idx) => {
+          const div = document.createElement('div'); div.className = 'history-card';
+          div.innerHTML = `<p>${q.label} (￥${q.amount})</p><div class="history-actions">
+            <button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button>
+            <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button></div>`;
+          this.dom.modalBody.appendChild(div);
+        });
+        const addBtn = document.createElement('button'); addBtn.className='btn secondary'; addBtn.textContent='+ 新增快捷鍵';
+        addBtn.onclick = () => {
+          const label = prompt('按鈕名稱 (例: 咖啡)'); if(!label) return;
+          const amount = Number(prompt('金額')); if(amount) { this.state.quickExpenses.push({id:Date.now(), label, amount}); this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); }
+        };
+        this.dom.modalBody.appendChild(addBtn);
+
+      } else if (type === 'note' || type === 'journal') {
+        this.dom.modalTitle.textContent = type === 'note' ? '歷史備註' : '歷史週誌';
+        const targetArr = this.state[type + 's'];
+        [...targetArr].reverse().forEach((item, revIdx) => {
+          const idx = targetArr.length - 1 - revIdx;
+          const div = document.createElement('div'); div.className = 'history-card';
+          const title = type==='journal' ? `第 ${item.week} 週` : '';
+          div.innerHTML = `<p><strong>${title}</strong> <span style="font-size:0.8rem;color:gray;">${item.date}</span></p><p style="white-space:pre-wrap;">${escapeHtml(item.text)}</p>
+            <div class="history-actions">
+              ${type==='journal' ? `<button class="btn btn-sm secondary" onclick="APP.exportJournal(${idx})">匯出 PDF</button>` : ''}
+              <button class="btn btn-sm secondary" onclick="APP.editTextItem('${type}s', ${idx}, '${type}')">編輯</button>
+              <button class="btn btn-sm danger" onclick="APP.deleteItem('${type}s', ${idx}, '${type}')">刪除</button>
+            </div>`;
+          this.dom.modalBody.appendChild(div);
+        });
+      }
     },
 
-    updateSettingsForm() {
-      this.dom.settingsStart.value = this.state.startDate; this.dom.settingsEnd.value = this.state.endDate;
-      this.dom.settingsHoursTarget.value = this.state.monthTarget;
-      if (this.getWeekNumber()) this.dom.weekLabel.textContent = `實習第 ${this.getWeekNumber()} 週週誌`;
+    // --- 全局編輯與刪除輔助函式 ---
+    deleteItem(arrayName, index, modalToReopen) {
+      if(confirm('確定刪除？')) {
+        this.state[arrayName].splice(index, 1); this.saveState(); this.renderAll();
+        if(modalToReopen) this.openModal(modalToReopen);
+      }
     },
-
-    render() {
-      this.changePage('dashboard'); this.fetchExchangeRate(); this.updateHoursDisplay();
-      this.updateExpensesDisplay(); this.renderReminders(); this.renderChecklist();
-      this.renderQuickExpenses(); this.updateDashboard(); this.updateLoginStatus(); this.updateSettingsForm();
+    editTextItem(arrayName, index, modalToReopen) {
+      const newText = prompt('請修改內容:', this.state[arrayName][index].text);
+      if(newText) { this.state[arrayName][index].text = newText; this.saveState(); this.openModal(modalToReopen); }
+    },
+    editReminder(index) {
+      const r = this.state.reminders[index];
+      const newTitle = prompt('修改提醒標題:', r.title); if(newTitle) r.title = newTitle;
+      const newDate = prompt('修改日期 (YYYY-MM-DD):', r.date); if(newDate) r.date = newDate;
+      this.saveState(); this.renderReminders();
+    },
+    editQuickExpense(index) {
+      const q = this.state.quickExpenses[index];
+      const newLabel = prompt('名稱:', q.label); if(newLabel) q.label = newLabel;
+      const newAmt = Number(prompt('金額:', q.amount)); if(newAmt) q.amount = newAmt;
+      this.saveState(); this.renderExpenses(); this.openModal('quickExpense');
+    },
+    editPunch(date, idx) {
+      const rec = this.state.punchRecords[date].records[idx];
+      const i = prompt('進 (HH:MM)', rec.in); if(i) rec.in=i;
+      const o = prompt('出 (HH:MM)', rec.out||''); if(o!==null) rec.out=o;
+      this.saveState(); this.renderHoursPage(); this.openModal('punch');
+    },
+    deletePunchDay(date) {
+      if(confirm('刪除這天所有打卡？')) { delete this.state.punchRecords[date]; this.saveState(); this.renderHoursPage(); this.openModal('punch'); }
+    },
+    exportJournal(index) {
+      const j = this.state.journals[index];
+      const win = window.open('','_blank');
+      win.document.write(`<html><head><title>第${j.week}週</title></head><body style="font-family:sans-serif;padding:40px;line-height:1.8;"><h2>第 ${j.week} 週實習週誌</h2><hr><p style="white-space:pre-wrap;">${escapeHtml(j.text)}</p></body></html>`);
+      win.document.close();
     },
 
     saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state)); },
-    loadState() { const saved = localStorage.getItem(STORAGE_KEY); if (saved) try { this.state = { ...this.getDefaultState(), ...JSON.parse(saved) }; } catch(e){} },
-    getDefaultState() { return JSON.parse(JSON.stringify(this.state)); },
+    loadState() { const s = localStorage.getItem(STORAGE_KEY); if(s) try { this.state = {...this.state, ...JSON.parse(s)}; }catch(e){} }
   };
 
   function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+  
+  // 暴露給 window 讓 onclick 可調用
+  window.APP = APP;
   document.addEventListener('DOMContentLoaded', () => APP.init());
 })();

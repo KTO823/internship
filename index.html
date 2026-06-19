@@ -10,6 +10,7 @@
 </head>
 <body>
   <div class="app-container">
+    <!-- 桌機側邊欄 -->
     <aside class="desktop-sidebar">
       <div class="sidebar-header">
         <div class="brand-logo">KTO</div>
@@ -17,28 +18,22 @@
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" data-page="dashboard">
-          <span class="icon">📊</span>
-          <span class="label">儀表板</span>
+          <span class="icon">📊</span><span class="label">儀表板</span>
         </button>
         <button class="nav-item" data-page="hours">
-          <span class="icon">⏱</span>
-          <span class="label">工時</span>
+          <span class="icon">⏱</span><span class="label">工時</span>
         </button>
         <button class="nav-item" data-page="expenses">
-          <span class="icon">💰</span>
-          <span class="label">記帳</span>
+          <span class="icon">💰</span><span class="label">記帳</span>
         </button>
         <button class="nav-item" data-page="notes">
-          <span class="icon">📝</span>
-          <span class="label">週誌</span>
+          <span class="icon">📝</span><span class="label">週誌</span>
         </button>
         <button class="nav-item" data-page="checklist">
-          <span class="icon">✓</span>
-          <span class="label">檢查表</span>
+          <span class="icon">✓</span><span class="label">檢查表</span>
         </button>
         <button class="nav-item" data-page="settings">
-          <span class="icon">⚙</span>
-          <span class="label">設定</span>
+          <span class="icon">⚙</span><span class="label">設定</span>
         </button>
       </nav>
       <div class="sidebar-footer">
@@ -47,31 +42,20 @@
       </div>
     </aside>
 
+    <!-- 手機底部 Tab 欄 -->
     <nav class="mobile-tabs">
-      <button class="tab-item active" data-page="dashboard">
-        <span class="icon">📊</span>
-        <span class="label">儀表板</span>
-      </button>
-      <button class="tab-item" data-page="hours">
-        <span class="icon">⏱</span>
-        <span class="label">工時</span>
-      </button>
-      <button class="tab-item" data-page="expenses">
-        <span class="icon">💰</span>
-        <span class="label">記帳</span>
-      </button>
-      <button class="tab-item" data-page="notes">
-        <span class="icon">📝</span>
-        <span class="label">週誌</span>
-      </button>
-      <button class="tab-item" data-page="checklist">
-        <span class="icon">✓</span>
-        <span class="label">檢查</span>
-      </button>
+      <button class="tab-item active" data-page="dashboard"><span class="icon">📊</span><span class="label">儀表板</span></button>
+      <button class="tab-item" data-page="hours"><span class="icon">⏱</span><span class="label">工時</span></button>
+      <button class="tab-item" data-page="expenses"><span class="icon">💰</span><span class="label">記帳</span></button>
+      <button class="tab-item" data-page="notes"><span class="icon">📝</span><span class="label">週誌</span></button>
+      <button class="tab-item" data-page="checklist"><span class="icon">✓</span><span class="label">檢查</span></button>
     </nav>
 
+    <!-- 主內容區 -->
     <main class="app-main">
-      <div class="page" id="page-dashboard" data-page="dashboard">
+      
+      <!-- 頁面：儀表板 -->
+      <div class="page active" id="page-dashboard" data-page="dashboard">
         <div class="page-header">
           <h1>儀表板</h1>
           <button class="btn-menu" id="menu-toggle">☰</button>
@@ -80,29 +64,29 @@
           <div class="card">
             <div class="progress-compact">
               <div class="progress-item">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div class="progress-label-row">
                   <label>當月支出</label>
-                  <strong id="progress-expense-text" style="color: var(--primary);">￥0</strong>
+                  <strong id="progress-expense-text" class="text-primary">￥0</strong>
                 </div>
               </div>
               <div class="progress-item">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div class="progress-label-row">
                   <label>實習進度</label>
-                  <strong id="progress-text" style="color: var(--primary);">0%</strong>
+                  <strong id="progress-text" class="text-primary">0%</strong>
                 </div>
                 <div class="progress-bar"><span id="progress-main" style="width:0%"></span></div>
               </div>
               <div class="progress-item">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div class="progress-label-row">
                   <label>工時達成</label>
-                  <strong id="progress-hours-text" style="color: var(--primary);">0/160 小時</strong>
+                  <strong id="progress-hours-text" class="text-primary">0/160 小時</strong>
                 </div>
                 <div class="progress-bar"><span id="progress-hours" style="width:0%"></span></div>
               </div>
               <div class="progress-item">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div class="progress-label-row">
                   <label>檢查表完成</label>
-                  <strong id="progress-checklist-text" style="color: var(--primary);">0/10 項</strong>
+                  <strong id="progress-checklist-text" class="text-primary">0/10 項</strong>
                 </div>
                 <div class="progress-bar"><span id="progress-checklist" style="width:0%"></span></div>
               </div>
@@ -113,118 +97,96 @@
             <h2>近期提醒</h2>
             <div id="dash-reminders" class="reminder-list card"></div>
           </section>
-
-          <section class="section">
-            <h2>實習狀態</h2>
-            <div class="status-card card">
-              <p id="dash-status-main" class="status-main">請先設定開始與結束日期</p>
-              <p id="dash-status-sub" class="status-sub">在設定頁面填寫重要日期</p>
-            </div>
-          </section>
         </div>
       </div>
 
+      <!-- 頁面：工時管理 -->
       <div class="page" id="page-hours" data-page="hours">
         <div class="page-header">
           <h1>工時管理</h1>
-          <button class="btn-menu" id="menu-toggle-2">☰</button>
+          <button class="btn-menu">☰</button>
         </div>
         <div class="page-content">
           <div class="card">
-            <h2>本月工時</h2>
+            <h2 id="hours-target-label">目標工時</h2>
             <div class="hours-display">
-              <strong id="hours-display">0</strong>
-              <span>小時</span>
+              <strong id="hours-display">0</strong><span>小時</span>
             </div>
             <p class="hint" id="hours-hint">目標 160 小時</p>
           </div>
 
           <section class="section">
-            <h2 id="punch-date-label">打卡控制台</h2>
+            <h2 id="punch-date-label">今日打卡紀錄</h2>
             <div class="card">
-              <div class="punch-buttons" style="margin-bottom: 16px;">
-                <button class="btn" id="punch-in">打卡進</button>
-                <button class="btn secondary" id="punch-out">打卡出</button>
+              
+              <!-- 即時打卡模式 -->
+              <div id="punch-realtime-section">
+                <div class="punch-buttons" style="margin-bottom: 16px;">
+                  <button class="btn" id="punch-in">打卡進</button>
+                  <button class="btn secondary" id="punch-out">打卡出</button>
+                </div>
               </div>
-              <button class="btn secondary" style="width: 100%;" onclick="APP.openHistoryModal('punch')">📋 查看與管理打卡紀錄</button>
-            </div>
-          </section>
 
-          <section class="section">
-            <h2>補打卡</h2>
-            <div class="card">
-              <div style="display: grid; gap: 12px;">
-                <div>
-                  <label>日期</label>
-                  <input type="date" id="makeup-date" />
+              <!-- 手動時數模式 -->
+              <div id="punch-manual-section" style="display: none; margin-bottom: 16px;">
+                <div class="input-group">
+                  <input type="number" id="manual-hours-input" placeholder="輸入今日總工時 (例如: 8)" step="0.5">
+                  <button class="btn" id="manual-hours-submit">儲存今日工時</button>
                 </div>
-                <div>
-                  <label>進時間</label>
-                  <input type="time" id="makeup-in-time" />
-                </div>
-                <div>
-                  <label>出時間</label>
-                  <input type="time" id="makeup-out-time" />
-                </div>
-                <button class="btn" id="makeup-submit">補打卡</button>
               </div>
+
+              <!-- 今日紀錄列表 -->
+              <div id="today-punch-list" style="margin-bottom: 16px; border-top: 1px dashed var(--border); padding-top: 12px;"></div>
+
+              <button class="btn secondary" id="btn-manage-punch" style="width: 100%; border-style: dashed;">📋 管理所有歷史紀錄</button>
             </div>
           </section>
         </div>
       </div>
 
+      <!-- 頁面：記帳系統 -->
       <div class="page" id="page-expenses" data-page="expenses">
         <div class="page-header">
           <h1>記帳系統</h1>
-          <button class="btn-menu" id="menu-toggle-3">☰</button>
+          <button class="btn-menu">☰</button>
         </div>
         <div class="page-content">
           <div class="card">
-            <h2>本月消費</h2>
+            <h2>總花費</h2>
             <div class="expense-display">
-              <div class="currency">
-                <span class="label">日幣</span>
-                <strong id="expense-jpy">￥0</strong>
-              </div>
+              <div class="currency"><span class="label">日幣</span><strong id="expense-jpy">￥0</strong></div>
               <div class="divider"></div>
-              <div class="currency">
-                <span class="label">台幣</span>
-                <strong id="expense-ntd">NT$0</strong>
-              </div>
+              <div class="currency"><span class="label">台幣</span><strong id="expense-ntd">NT$0</strong></div>
             </div>
+            <button class="btn secondary btn-sm" id="btn-manage-expense" style="width:100%; margin-top:12px;">查看記帳明細</button>
           </div>
 
           <section class="section">
-            <h2>快速記帳</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h2 style="margin:0;">快速記帳</h2>
+              <button class="btn-icon" id="btn-edit-quick-expense" style="font-size:0.9rem; color:var(--primary);">設定快捷鍵 ⚙️</button>
+            </div>
             <div class="card">
               <div class="expense-buttons" id="expense-quick-buttons"></div>
-              <button class="btn secondary" id="expense-customize" style="margin-top: 12px; width: 100%;">+ 新增快速記帳</button>
             </div>
           </section>
 
           <section class="section">
-            <h2>自訂金額</h2>
+            <h2>自訂金額記帳</h2>
             <div class="card input-group">
+              <input type="text" id="expense-custom-desc" placeholder="買了什麼？ (例如: 午餐)" />
               <input type="number" id="expense-custom" placeholder="輸入日幣金額" min="0" step="10" />
               <button class="btn" id="expense-add">記帳</button>
             </div>
           </section>
-
-          <section class="section">
-            <h2>設定</h2>
-            <div class="card input-group">
-              <label>即時匯率（JPY → NTD）</label>
-              <input type="number" id="exchange-rate" placeholder="載入中..." disabled />
-              <p class="hint">系統已啟動自動匯率更新</p>
-            </div>
-          </section>
         </div>
       </div>
 
+      <!-- 頁面：週誌 -->
       <div class="page" id="page-notes" data-page="notes">
         <div class="page-header">
           <h1>週誌與備註</h1>
-          <button class="btn-menu" id="menu-toggle-4">☰</button>
+          <button class="btn-menu">☰</button>
         </div>
         <div class="page-content">
           <section class="section">
@@ -235,7 +197,7 @@
                 <button class="btn" id="save-note">保存</button>
                 <button class="btn secondary" id="clear-note">清除</button>
               </div>
-              <button class="btn secondary" style="width: 100%; border-style: dashed;" onclick="APP.openHistoryModal('note')">📂 管理歷史備註</button>
+              <button class="btn secondary" id="btn-manage-note" style="width: 100%; border-style: dashed;">📂 管理歷史備註</button>
             </div>
           </section>
 
@@ -246,22 +208,23 @@
               <textarea id="weekly-journal" placeholder="寫週誌或報告草稿..." rows="8"></textarea>
               <div style="display: grid; gap: 12px; margin-top: 12px;">
                 <button class="btn" id="save-journal">儲存週誌</button>
-                <button class="btn secondary" style="border-style: dashed;" onclick="APP.openHistoryModal('journal')">📖 管理歷史週誌與匯出</button>
+                <button class="btn secondary" id="btn-manage-journal" style="border-style: dashed;">📖 管理歷史週誌與匯出</button>
               </div>
             </div>
           </section>
         </div>
       </div>
 
+      <!-- 頁面：檢查表與提醒 -->
       <div class="page" id="page-checklist" data-page="checklist">
         <div class="page-header">
           <h1>畢業通關清單</h1>
-          <button class="btn-menu" id="menu-toggle-5">☰</button>
+          <button class="btn-menu">☰</button>
         </div>
         <div class="page-content">
           <div class="card">
             <h2>重要提醒</h2>
-            <div id="reminder-list" class="reminder-list"></div>
+            <div id="reminder-list" class="reminder-list" style="margin-bottom: 16px;"></div>
             <div class="input-group">
               <input type="text" id="new-reminder-title" placeholder="新增提醒事項" />
               <input type="date" id="new-reminder-date" />
@@ -271,91 +234,77 @@
 
           <section class="section">
             <h2>文件檢查清單</h2>
-            <div class="card">
-              <div id="checklist" class="checklist"></div>
-              <p class="hint">勾選後會自動保存進度</p>
-            </div>
+            <div class="card"><div id="checklist" class="checklist"></div></div>
           </section>
         </div>
       </div>
 
+      <!-- 頁面：設定 -->
       <div class="page" id="page-settings" data-page="settings">
         <div class="page-header">
           <h1>設定</h1>
-          <button class="btn-menu" id="menu-toggle-6">☰</button>
+          <button class="btn-menu">☰</button>
         </div>
         <div class="page-content">
+          
           <section class="section">
-            <h2>登入狀態</h2>
+            <h2>個人化模式選擇</h2>
             <div class="card">
               <div class="setting-row">
-                <label>使用者名稱</label>
-                <input type="text" id="settings-user" placeholder="如：小田" />
+                <label>打卡模式</label>
+                <select id="settings-punch-mode" class="styled-select">
+                  <option value="realtime">即時打卡 (上班點進、下班點出)</option>
+                  <option value="manual">手動時數 (下班後一次輸入總小時)</option>
+                </select>
               </div>
               <div class="setting-row">
-                <button class="btn" id="settings-login">登入</button>
-                <button class="btn secondary" id="settings-logout">登出</button>
+                <label>工時目標類型</label>
+                <select id="settings-hours-mode" class="styled-select">
+                  <option value="monthly">每月目標</option>
+                  <option value="total">總時數目標</option>
+                </select>
               </div>
-              <p id="settings-status" class="hint">登入資訊會保存在本機</p>
+              <div class="setting-row">
+                <label>目標時數設定</label>
+                <input type="number" id="settings-hours-target" value="160" min="1" />
+              </div>
             </div>
           </section>
 
           <section class="section">
             <h2>實習日期</h2>
             <div class="card">
-              <div class="setting-row">
-                <label>實習開始日期</label>
-                <input type="date" id="settings-start" />
-              </div>
-              <div class="setting-row">
-                <label>預計結束日期</label>
-                <input type="date" id="settings-end" />
-              </div>
+              <div class="setting-row"><label>開始日期</label><input type="date" id="settings-start" /></div>
+              <div class="setting-row"><label>預計結束</label><input type="date" id="settings-end" /></div>
             </div>
           </section>
-
-          <section class="section">
-            <h2>目標設定</h2>
-            <div class="card">
-              <div class="setting-row">
-                <label>月度工時目標</label>
-                <input type="number" id="settings-hours-target" value="160" min="1" />
-              </div>
-              <div class="setting-row">
-                <label>匯率 (JPY → NTD)</label>
-                <input type="number" id="settings-exchange" placeholder="自動載入" disabled />
-                <p class="hint" style="margin-top: 8px;">自動即時匯率，不可編輯</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="section">
+          
+          <section class="section" style="margin-bottom: 50px;">
             <h2>資料管理</h2>
             <div class="card">
-              <p class="hint">所有資料存儲在本機瀏覽器，安全且私密。</p>
               <div class="button-group">
                 <button class="btn" id="data-export">匯出備份</button>
                 <button class="btn secondary" id="data-import">匯入備份</button>
-                <button class="btn secondary danger" id="data-reset">重置全部</button>
               </div>
             </div>
             <input type="file" id="import-file" accept="application/json" hidden />
           </section>
+
         </div>
       </div>
     </main>
   </div>
 
-  <dialog id="history-modal" class="custom-modal">
+  <!-- 彈出視窗 Overlay -->
+  <div id="modal-overlay" class="modal-overlay">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 id="modal-title">管理歷史紀錄</h2>
+        <h2 id="modal-title">管理</h2>
         <button id="modal-close" class="btn-icon">✕</button>
       </div>
-      <div id="modal-body" class="modal-body">
-        </div>
+      <div id="modal-body" class="modal-body"></div>
     </div>
-  </dialog>
+  </div>
 
   <script src="./assets/app.js"></script>
 </body>
