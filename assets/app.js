@@ -45,6 +45,8 @@
       this.dom = {
         pages: document.querySelectorAll('.page'),
         navBtns: document.querySelectorAll('.nav-item, .tab-item'),
+        menuToggles: document.querySelectorAll('.btn-menu'), // 漢堡選單
+        sidebar: document.querySelector('.desktop-sidebar'), // 側邊欄
         
         // 設定區
         setPunchMode: document.getElementById('settings-punch-mode'),
@@ -88,8 +90,24 @@
           if (targetPage) targetPage.classList.add('active');
           
           document.querySelectorAll(`[data-page="${btn.dataset.page}"]`).forEach(b => b.classList.add('active'));
+          
+          // 手機版點擊後自動收起側邊欄
+          if (window.innerWidth < 1024 && this.dom.sidebar) {
+            this.dom.sidebar.style.display = 'none';
+          }
         });
       });
+
+      // 漢堡選單 (手機側邊欄展開/收起)
+      if (this.dom.menuToggles) {
+        this.dom.menuToggles.forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (this.dom.sidebar) {
+              this.dom.sidebar.style.display = (this.dom.sidebar.style.display === 'flex') ? 'none' : 'flex';
+            }
+          });
+        });
+      }
 
       // 設定變更監聽
       if (this.dom.setPunchMode) {
@@ -239,7 +257,11 @@
     },
     
     getTodayStr() { 
-      return new Date().toISOString().slice(0, 10); 
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     },
     
     getWeekNum() { 
