@@ -562,7 +562,7 @@ const APP = {
     this.state.checklist.forEach(c => { 
       if (!c.checked) { 
         const d = Math.ceil((new Date(c.date) - new Date()) / 86400000); 
-        if (d <= 30 && d >= 0) urgents.push({ title: c.label, days: d, type: '規定死線' }); 
+        if (d <= 30 && d >= 0) urgents.push({ title: c.label, days: d, type: '重要文件' }); 
       }
     });
     
