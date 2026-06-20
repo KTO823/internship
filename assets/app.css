@@ -270,24 +270,50 @@ html, body {
   gap: 12px;
 }
 
+/* 把 .setting-row input 也加進來一起美化 */
 .input-group input,
-.styled-select {
+.styled-select,
+.setting-row input {
   width: 100%;
-  max-width: 100%; /* 強制不能超出父容器 */
+  max-width: 100%;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 0.95rem;
-  box-sizing: border-box; /* 確保 padding 不會撐破寬度 */
-  -webkit-appearance: none; /* 移除蘋果預設的奇怪立體感 */
+  box-sizing: border-box;
+  -webkit-appearance: none;
   appearance: none;
-  background: #ffffff; /* 強制覆蓋蘋果的灰色背景 */
+  background: #ffffff;
+  color: var(--text);
+  font-family: inherit;
+  transition: all 0.2s ease;
 }
 
+/* 點擊時的光暈效果 */
 .input-group input:focus,
-.styled-select:focus {
+.styled-select:focus,
+.setting-row input:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+/* 設定列專屬排版，讓標題跟輸入框有呼吸空間 */
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.setting-row:last-child {
+  margin-bottom: 0;
+}
+
+.setting-row label {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
 }
 
 .btn {

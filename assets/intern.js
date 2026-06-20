@@ -90,7 +90,7 @@
       const saved = JSON.parse(raw);
       return { ...defaultState, ...saved };
     } catch (error) {
-      console.warn('讀取實習儀表板失敗', error);
+      console.warn('讀取實習首頁失敗', error);
       return { ...defaultState };
     }
   }
