@@ -637,21 +637,25 @@ body.theme-makie-gold {
   background-size: 100% 100%, 40px 40px, 40px 40px !important;
 }
 
-/* 4. 300天獎勵：幻光星海 (降亮度，改為高質感星雲深藍) */
+/* 4. 300天獎勵：幻光星海 (提升活力與亮度，找回星空的魔力) */
 body.theme-aurora-stage {
-  --primary: #3b7696; /* 柔和、有質感的星雲深藍，不再刺眼 */
-  --primary-light: rgba(59, 118, 150, 0.2);
-  --bg: #080b12; /* 再稍微加深一點點背景，讓對比更穩重 */
-  --surface: #111723; /* 卡片底色微調 */
-  --text: #d8e8e8; --text-muted: #6b828c; --border: rgba(59, 118, 150, 0.35);
-  --danger-bg: rgba(59, 118, 150, 0.15); --danger-text: #7bc5d4; --danger-border: rgba(59, 118, 150, 0.4);
-  background-color: #080b12 !important;
+  --primary: #00b4d8; /* 充滿活力的星際青藍，不會太螢光但很有精神 */
+  --primary-light: rgba(0, 180, 216, 0.15);
+  --bg: #0b101e; /* 帶有一點點深藍色的宇宙底色 */
+  --surface: #1a233a; /* 卡片底色微調亮，讓它跟背景有明顯層次 */
+  --text: #ffffff; /* 文字改為純白，對比度最高最清晰 */
+  --text-muted: #8eb2c5; /* 附註文字提亮，不再灰暗 */
+  --border: rgba(0, 180, 216, 0.4);
+  --danger-bg: rgba(0, 180, 216, 0.15); 
+  --danger-text: #48cae4; 
+  --danger-border: rgba(0, 180, 216, 0.5);
+  background-color: #0b101e !important;
   background-attachment: fixed !important;
-  /* 柔和的極光漸層 + 隨機散落的文字符號星星 */
+  /* 加亮極光漸層與星星的透明度，讓宇宙閃耀起來 */
   background-image: 
-    radial-gradient(circle at 15% 20%, rgba(59, 118, 150, 0.15), transparent 50%),
-    radial-gradient(circle at 85% 80%, rgba(100, 75, 150, 0.15), transparent 50%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Ctext x='40' y='60' fill='rgba(255,255,255,0.4)' font-size='16'%3E✦%3C/text%3E%3Ctext x='250' y='120' fill='rgba(255,255,255,0.5)' font-size='12'%3E⋆%3C/text%3E%3Ctext x='120' y='280' fill='rgba(255,255,255,0.3)' font-size='20'%3E✧%3C/text%3E%3Ctext x='320' y='320' fill='rgba(255,255,255,0.4)' font-size='14'%3E*%3C/text%3E%3Ctext x='180' y='180' fill='rgba(255,255,255,0.2)' font-size='10'%3E.%3C/text%3E%3Ctext x='350' y='50' fill='rgba(255,255,255,0.3)' font-size='12'%3E⋆%3C/text%3E%3Ctext x='50' y='350' fill='rgba(255,255,255,0.2)' font-size='16'%3E✦%3C/text%3E%3C/svg%3E") !important;
+    radial-gradient(circle at 15% 20%, rgba(0, 180, 216, 0.25), transparent 50%),
+    radial-gradient(circle at 85% 80%, rgba(138, 43, 226, 0.2), transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Ctext x='40' y='60' fill='rgba(255,255,255,0.6)' font-size='16'%3E✦%3C/text%3E%3Ctext x='250' y='120' fill='rgba(255,255,255,0.7)' font-size='12'%3E⋆%3C/text%3E%3Ctext x='120' y='280' fill='rgba(255,255,255,0.5)' font-size='20'%3E✧%3C/text%3E%3Ctext x='320' y='320' fill='rgba(255,255,255,0.6)' font-size='14'%3E*%3C/text%3E%3Ctext x='180' y='180' fill='rgba(255,255,255,0.4)' font-size='10'%3E.%3C/text%3E%3Ctext x='350' y='50' fill='rgba(255,255,255,0.5)' font-size='12'%3E⋆%3C/text%3E%3Ctext x='50' y='350' fill='rgba(255,255,255,0.4)' font-size='16'%3E✦%3C/text%3E%3C/svg%3E") !important;
 }
 
 /* 5. 🐾 獨立彩蛋：暖心柴柴版 */
