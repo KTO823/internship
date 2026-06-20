@@ -577,69 +577,87 @@ textarea {
   }
 }
 
-/* 覆蓋原本的緊急提醒顏色，讓它聽從主題的指揮，解決看不到字的問題 */
+/* ==========================================================================
+   遊戲化自訂主題配色 (終極護眼質感版)
+   ========================================================================== */
+
+/* 修正緊急提醒的對比度，讓它在暗色主題下也清晰可見 */
 .reminder-item.urgent, .checklist-item.urgent {
   background-color: var(--danger-bg) !important;
-  color: var(--danger-text) !important;
-  border: 1px solid var(--border) !important;
+  border-color: var(--danger-border, var(--border)) !important;
 }
-.reminder-item.urgent h4, .reminder-item.urgent p, .checklist-item.urgent span {
+.reminder-item.urgent h4, .reminder-item.urgent p, .checklist-item.urgent span, .checklist-item.urgent .checklist-item-meta {
   color: var(--danger-text) !important;
 }
 
-/* 預設標準藍 (原始外觀) */
+/* 0. 預設標準藍 (原始外觀) */
 body, body.theme-default {
-  --primary: #4a90e2; --primary-light: #eef5fc; --bg: #f4f6f9; --card-bg: #ffffff;
-  --text: #333333; --text-muted: #888888; --border: #e0e0e0;
-  --danger-bg: #ffe5e5; --danger-text: #d32f2f;
+  --primary: #1f3c88; --primary-light: #e6eefc; 
+  --bg: #f5f4f2; --surface: #ffffff; /* 關鍵：設定 surface 修復白底問題 */
+  --text: #111827; --text-muted: #6b7280; --border: rgba(31, 41, 55, 0.15);
+  --danger-bg: #fef2f2; --danger-text: #b91c1c; --danger-border: #fca5a5;
   background-image: none;
 }
 
-/* 14天獎勵：簡約黑白 (加深底色對比，更加俐落) */
+/* 1. 14天獎勵：簡約黑白 (保持乾淨) */
 body.theme-monochrome {
-  --primary: #222222; --primary-light: #f0f0f0; --bg: #e0e0e0; --card-bg: #ffffff;
+  --primary: #222222; --primary-light: #f0f0f0; 
+  --bg: #e5e5e5; --surface: #ffffff; 
   --text: #111111; --text-muted: #666666; --border: #cccccc;
-  --danger-bg: #eeeeee; --danger-text: #333333;
+  --danger-bg: #eeeeee; --danger-text: #333333; --danger-border: #aaaaaa;
   background-image: none;
 }
 
-/* 100天獎勵：夜櫻霓虹 (修正為深紫黑底，文字改為高對比櫻粉白) */
+/* 2. 100天獎勵：夜櫻霓虹 (調暗底色，降低粉色飽和度，變成有質感的暗粉紫) */
 body.theme-neon-sakura {
-  --primary: #ff7eb3; --primary-light: rgba(255, 126, 179, 0.15);
-  --bg: #140912; --card-bg: #22111a;
-  --text: #fdf0f5; --text-muted: #b58b9d; --border: rgba(255, 126, 179, 0.3);
-  --danger-bg: rgba(255, 105, 180, 0.15); --danger-text: #ff99cc;
+  --primary: #d87093; /* 柔和的莫蘭迪暗粉 */
+  --primary-light: rgba(216, 112, 147, 0.15);
+  --bg: #1a1014; /* 極深的紫黑背景 */
+  --surface: #26171e; /* 卡片與側邊欄變成深色，字才看得見！ */
+  --text: #f8e8ee; --text-muted: #bda3ad; --border: rgba(216, 112, 147, 0.25);
+  --danger-bg: rgba(216, 112, 147, 0.12); --danger-text: #f4b8cc; --danger-border: rgba(216, 112, 147, 0.4);
   background-image: none;
 }
 
-/* 200天獎勵：蒔繪金箔 (加入隱約的斜線紋理與沉穩高級黑) */
+/* 3. 200天獎勵：蒔繪金箔 (沉穩高級黑 + 明顯的菱格紋金線) */
 body.theme-makie-gold {
-  --primary: #d4af37; --primary-light: rgba(212, 175, 55, 0.1);
-  --bg: #0d0d0d; --card-bg: #1a1813;
-  --text: #f9f6ef; --text-muted: #a39770; --border: rgba(212, 175, 55, 0.25);
-  --danger-bg: rgba(212, 175, 55, 0.1); --danger-text: #e6c875;
-  background-image: repeating-linear-gradient(45deg, rgba(212, 175, 55, 0.03) 0, rgba(212, 175, 55, 0.03) 1px, transparent 1px, transparent 12px);
+  --primary: #c5a059; /* 柔和的高級沙金 */
+  --primary-light: rgba(197, 160, 89, 0.1);
+  --bg: #121212; 
+  --surface: #1e1e1e; /* 卡片與側邊欄變成曜石黑 */
+  --text: #f0eedf; --text-muted: #a39c87; --border: rgba(197, 160, 89, 0.3);
+  --danger-bg: rgba(197, 160, 89, 0.08); --danger-text: #e6ce98; --danger-border: rgba(197, 160, 89, 0.4);
+  background-color: #121212;
+  /* 增加高級感的菱格紋交織金線 */
+  background-image: 
+    linear-gradient(45deg, rgba(212, 175, 55, 0.04) 1px, transparent 1px),
+    linear-gradient(-45deg, rgba(212, 175, 55, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
 }
 
-/* 300天獎勵：幻光星海 (文字符號星星＋極光漸層背景) */
+/* 4. 300天獎勵：幻光星海 (降低刺眼藍光，加上 SVG 點點星空與柔和極光) */
 body.theme-aurora-stage {
-  --primary: #00f2fe; --primary-light: rgba(0, 242, 254, 0.15);
-  --bg: #070913; --card-bg: rgba(15, 20, 35, 0.85);
-  --text: #e0f7fa; --text-muted: #79aeb5; --border: rgba(0, 242, 254, 0.3);
-  --danger-bg: rgba(0, 242, 254, 0.15); --danger-text: #8ee3ef;
-  background-color: #070913;
-  background-image:
-    radial-gradient(circle at 15% 30%, rgba(79, 172, 254, 0.12), transparent 45%),
-    radial-gradient(circle at 85% 70%, rgba(155, 89, 182, 0.12), transparent 45%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><text x='30' y='50' fill='rgba(255,255,255,0.15)' font-size='18'>✦</text><text x='200' y='90' fill='rgba(255,255,255,0.25)' font-size='12'>⋆</text><text x='100' y='200' fill='rgba(255,255,255,0.2)' font-size='24'>✧</text><text x='250' y='240' fill='rgba(255,255,255,0.3)' font-size='14'>*</text><text x='150' y='130' fill='rgba(255,255,255,0.1)' font-size='10'>.</text></svg>");
+  --primary: #4dd0e1; /* 柔和的極光青藍色 */
+  --primary-light: rgba(77, 208, 225, 0.15);
+  --bg: #0a0e17; 
+  --surface: #131926; /* 卡片與側邊欄變成深海軍藍 */
+  --text: #e0f2f1; --text-muted: #78929c; --border: rgba(77, 208, 225, 0.25);
+  --danger-bg: rgba(77, 208, 225, 0.1); --danger-text: #8ee3ef; --danger-border: rgba(77, 208, 225, 0.3);
+  background-color: #0a0e17;
   background-attachment: fixed;
+  /* 柔和的極光漸層 + 隨機散落的文字符號星星 */
+  background-image: 
+    radial-gradient(circle at 15% 20%, rgba(77, 208, 225, 0.06), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(126, 87, 194, 0.06), transparent 40%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><text x='40' y='60' fill='rgba(255,255,255,0.1)' font-size='14'>✦</text><text x='250' y='120' fill='rgba(255,255,255,0.15)' font-size='10'>⋆</text><text x='120' y='280' fill='rgba(255,255,255,0.08)' font-size='18'>✧</text><text x='320' y='320' fill='rgba(255,255,255,0.12)' font-size='12'>*</text><text x='180' y='180' fill='rgba(255,255,255,0.05)' font-size='8'>.</text></svg>");
 }
 
-/* 🐾 獨立彩蛋：暖心柴柴版 */
+/* 5. 🐾 獨立彩蛋：暖心柴柴版 */
 body.theme-shiba-gold {
-  --primary: #d68942; --primary-light: #fdf5ec; --bg: #faf7f2; --card-bg: #ffffff;
+  --primary: #d68942; --primary-light: #fdf5ec; 
+  --bg: #faf7f2; --surface: #ffffff; 
   --text: #5c432b; --text-muted: #9e846f; --border: #f0e4d8;
-  --danger-bg: #fbeee6; --danger-text: #c06c20;
+  --danger-bg: #fbeee6; --danger-text: #c06c20; --danger-border: #f5d3b3;
   background-image: none;
 }
 /* ==========================================================================
