@@ -144,12 +144,16 @@ html, body {
   font-weight: 700;
 }
 
-.btn-menu {
+.mobile-settings-btn {
   display: none;
   border: none;
   background: transparent;
   font-size: 1.5rem;
   cursor: pointer;
+  transition: transform 0.2s;
+}
+.mobile-settings-btn:active {
+  transform: rotate(45deg); /* 點擊時會有齒輪微轉的可愛特效 */
 }
 
 .page-content {
@@ -568,7 +572,7 @@ textarea {
     padding-bottom: 90px;
   }
 
-  .btn-menu {
+  .mobile-settings-btn {
     display: block;
   }
 }
