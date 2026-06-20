@@ -13,13 +13,12 @@ const firebaseConfig = {
   appId: "1:997860315918:web:562eba719dcd16780f7d5f"
 };
 
-// 啟動雲端引擎
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-const STORAGE_KEY = 'intern-dashboard-v6';
+const STORAGE_KEY = 'intern-dashboard-v7'; // 更新版本號
 
 const APP = {
   state: {
@@ -30,6 +29,7 @@ const APP = {
     hoursTargetMode: 'monthly',
     hoursTarget: 160,
     exchangeRate: 0.21,
+    currentExpenseMonth: '', // 紀錄目前查看的記帳月份 (例如 "2026-06")
     punchRecords: {},
     expenses: [],
     notes: [],
@@ -58,27 +58,33 @@ const APP = {
     this.cacheDom();
     this.setupListeners();
     this.loadLocalState();
+    
+    // 初始化當前月份
+    if (!this.state.currentExpenseMonth) {
+      const d = new Date();
+      this.state.currentExpenseMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
     this.renderAll();
     this.fetchExchangeRate();
 
-    // 監聽登入狀態變化
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         this.firebaseUser = user;
-        this.dom.settingsStatus.textContent = `已登入：${user.displayName} (資料同步中...)`;
+        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = `已登入：${user.displayName} (資料同步中...)`;
         await this.loadCloudState(user);
-        this.dom.settingsStatus.textContent = `已連線雲端：${user.displayName}`;
-        this.dom.sidebarUser.textContent = user.displayName;
-        this.dom.settingsLogin.style.display = 'none';
-        this.dom.sidebarLogout.style.display = 'block';
+        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = `已連線雲端：${user.displayName}`;
+        if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = user.displayName;
+        if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'none';
+        if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'block';
         this.renderAll();
       } else {
         this.firebaseUser = null;
         this.state.user = { isLoggedIn: false, name: '' };
-        this.dom.settingsStatus.textContent = '未登入 (目前僅保存在本機)';
-        this.dom.sidebarUser.textContent = '未登入';
-        this.dom.settingsLogin.style.display = 'block';
-        this.dom.sidebarLogout.style.display = 'none';
+        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = '未登入 (目前僅保存在本機)';
+        if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = '未登入';
+        if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'block';
+        if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'none';
         this.saveStateLocally(); 
         this.renderAll();
       }
@@ -111,10 +117,15 @@ const APP = {
       manualSubmit: document.getElementById('manual-hours-submit'),
       todayPunchList: document.getElementById('today-punch-list'),
       
+      // 記帳區元素更新
       expDesc: document.getElementById('expense-custom-desc'),
       expAmount: document.getElementById('expense-custom'),
       expAdd: document.getElementById('expense-add'),
       expQuickBox: document.getElementById('expense-quick-buttons'),
+      btnPrevMonth: document.getElementById('btn-prev-month'),
+      btnNextMonth: document.getElementById('btn-next-month'),
+      monthDisplay: document.getElementById('current-month-display'),
+      monthlyExpenseList: document.getElementById('monthly-expense-list'),
       
       modal: document.getElementById('modal-overlay'),
       modalClose: document.getElementById('modal-close'),
@@ -147,64 +158,35 @@ const APP = {
       });
     }
 
-    if (this.dom.settingsPunchMode) {
-      this.dom.settingsPunchMode.addEventListener('change', (e) => { 
-        this.state.punchMode = e.target.value; this.saveState(); this.renderHoursPage(); 
-      });
-    }
-    
-    if (this.dom.settingsHoursMode) {
-      this.dom.settingsHoursMode.addEventListener('change', (e) => { 
-        this.state.hoursTargetMode = e.target.value; this.saveState(); this.renderHoursPage(); this.updateDashboard(); 
-      });
-    }
-
-    if (this.dom.settingsHoursTarget) {
-      this.dom.settingsHoursTarget.addEventListener('change', (e) => { 
-        this.state.hoursTarget = Number(e.target.value) || 160; this.saveState(); this.renderHoursPage(); this.updateDashboard(); 
-      });
-    }
-
-    if (this.dom.settingsStart) {
-      this.dom.settingsStart.addEventListener('change', (e) => { 
-        this.state.startDate = e.target.value; this.saveState(); this.updateDashboard(); 
-      });
-    }
-
-    if (this.dom.settingsEnd) {
-      this.dom.settingsEnd.addEventListener('change', (e) => { 
-        this.state.endDate = e.target.value; this.saveState(); this.updateDashboard(); 
-      });
-    }
+    if (this.dom.settingsPunchMode) this.dom.settingsPunchMode.addEventListener('change', (e) => { this.state.punchMode = e.target.value; this.saveState(); this.renderHoursPage(); });
+    if (this.dom.settingsHoursMode) this.dom.settingsHoursMode.addEventListener('change', (e) => { this.state.hoursTargetMode = e.target.value; this.saveState(); this.renderHoursPage(); this.updateDashboard(); });
+    if (this.dom.settingsHoursTarget) this.dom.settingsHoursTarget.addEventListener('change', (e) => { this.state.hoursTarget = Number(e.target.value) || 160; this.saveState(); this.renderHoursPage(); this.updateDashboard(); });
+    if (this.dom.settingsStart) this.dom.settingsStart.addEventListener('change', (e) => { this.state.startDate = e.target.value; this.saveState(); this.updateDashboard(); });
+    if (this.dom.settingsEnd) this.dom.settingsEnd.addEventListener('change', (e) => { this.state.endDate = e.target.value; this.saveState(); this.updateDashboard(); });
 
     if (this.dom.settingsLogin) {
       this.dom.settingsLogin.addEventListener('click', async () => {
-        try {
-          await signInWithPopup(auth, provider);
-        } catch (error) {
-          alert('登入失敗：' + error.message);
-        }
+        try { await signInWithPopup(auth, provider); } catch (error) { alert('登入失敗：' + error.message); }
       });
     }
 
     if (this.dom.sidebarLogout) {
       this.dom.sidebarLogout.addEventListener('click', async () => {
         if (confirm('確定要登出嗎？登出後將無法同步雲端資料。')) {
-          await signOut(auth);
-          alert('已登出');
+          await signOut(auth); alert('已登出');
         }
       });
     }
 
-    if (this.dom.btnHoursHelp) {
-      this.dom.btnHoursHelp.addEventListener('click', () => {
-        alert('【每月目標】\n適合需要控管單月排班上限的狀況。進度只算當月累積。\n\n【總時數目標】\n適合學校規定總時數達標的狀況。進度會累加實習期間的所有時數。');
-      });
-    }
+    if (this.dom.btnHoursHelp) this.dom.btnHoursHelp.addEventListener('click', () => { alert('【每月目標】\n進度只算當月累積。\n\n【總時數目標】\n進度會累加實習期間的所有時數。'); });
 
     if (this.dom.btnIn) this.dom.btnIn.addEventListener('click', () => this.handleRealtimePunch('in'));
     if (this.dom.btnOut) this.dom.btnOut.addEventListener('click', () => this.handleRealtimePunch('out'));
     if (this.dom.manualSubmit) this.dom.manualSubmit.addEventListener('click', () => this.handleManualPunch());
+
+    // 月份切換監聽
+    if (this.dom.btnPrevMonth) this.dom.btnPrevMonth.addEventListener('click', () => this.changeExpenseMonth(-1));
+    if (this.dom.btnNextMonth) this.dom.btnNextMonth.addEventListener('click', () => this.changeExpenseMonth(1));
 
     if (this.dom.expAdd) {
       this.dom.expAdd.addEventListener('click', () => {
@@ -223,12 +205,7 @@ const APP = {
       saveNoteBtn.addEventListener('click', () => {
         const noteInput = document.getElementById('quick-note');
         const text = noteInput.value.trim();
-        if (text) { 
-          this.state.notes.push({ id: Date.now(), text, date: this.getNowString() }); 
-          noteInput.value = ''; 
-          this.saveState(); 
-          alert('備註已儲存'); 
-        }
+        if (text) { this.state.notes.push({ id: Date.now(), text, date: this.getNowString() }); noteInput.value = ''; this.saveState(); alert('備註已儲存'); }
       });
     }
 
@@ -237,12 +214,7 @@ const APP = {
       saveJournalBtn.addEventListener('click', () => {
         const journalInput = document.getElementById('weekly-journal');
         const text = journalInput.value.trim();
-        if (text) { 
-          this.state.journals.push({ id: Date.now(), week: this.getWeekNum(), text, date: this.getNowString() }); 
-          journalInput.value = ''; 
-          this.saveState(); 
-          alert('週誌已儲存'); 
-        }
+        if (text) { this.state.journals.push({ id: Date.now(), week: this.getWeekNum(), text, date: this.getNowString() }); journalInput.value = ''; this.saveState(); alert('週誌已儲存'); }
       });
     }
 
@@ -251,12 +223,7 @@ const APP = {
       addReminderBtn.addEventListener('click', () => {
         const title = document.getElementById('new-reminder-title').value.trim();
         const date = document.getElementById('new-reminder-date').value;
-        if (title && date) { 
-          this.state.reminders.push({ id: Date.now().toString(), title, date }); 
-          this.saveState(); 
-          this.renderReminders(); 
-          this.updateDashboard();
-        }
+        if (title && date) { this.state.reminders.push({ id: Date.now().toString(), title, date }); this.saveState(); this.renderReminders(); this.updateDashboard(); }
       });
     }
 
@@ -266,16 +233,11 @@ const APP = {
     };
     
     bindModal('btn-manage-punch', 'punch');
-    bindModal('btn-manage-expense', 'expense');
     bindModal('btn-edit-quick-expense', 'quickExpense');
     bindModal('btn-manage-note', 'note');
     bindModal('btn-manage-journal', 'journal');
     
-    if (this.dom.modalClose) {
-      this.dom.modalClose.addEventListener('click', () => {
-        this.dom.modal.classList.remove('active');
-      });
-    }
+    if (this.dom.modalClose) this.dom.modalClose.addEventListener('click', () => { this.dom.modal.classList.remove('active'); });
 
     const btnExport = document.getElementById('data-export');
     if (btnExport) btnExport.addEventListener('click', () => this.exportData());
@@ -309,44 +271,30 @@ const APP = {
   handleRealtimePunch(type) {
     const today = this.getTodayStr();
     const timeStr = new Date().toTimeString().slice(0,5);
-    
-    if (!this.state.punchRecords[today]) {
-      this.state.punchRecords[today] = { records: [], manualTotal: 0 };
-    }
-    
+    if (!this.state.punchRecords[today]) this.state.punchRecords[today] = { records: [], manualTotal: 0 };
     const recs = this.state.punchRecords[today].records;
     
-    if (type === 'in') {
-      recs.push({ in: timeStr, out: null });
-    } else if (type === 'out' && recs.length > 0) {
-      recs[recs.length - 1].out = timeStr;
-    }
+    if (type === 'in') recs.push({ in: timeStr, out: null });
+    else if (type === 'out' && recs.length > 0) recs[recs.length - 1].out = timeStr;
     
-    this.saveState(); 
-    this.renderHoursPage();
+    this.saveState(); this.renderHoursPage();
   },
   
   handleManualPunch() {
     const hours = Number(this.dom.manualInput.value);
     if (hours > 0) {
       const today = this.getTodayStr();
-      if (!this.state.punchRecords[today]) {
-        this.state.punchRecords[today] = { records: [], manualTotal: 0 };
-      }
+      if (!this.state.punchRecords[today]) this.state.punchRecords[today] = { records: [], manualTotal: 0 };
       this.state.punchRecords[today].manualTotal = hours; 
-      this.saveState(); 
-      this.renderHoursPage(); 
-      this.dom.manualInput.value = ''; 
-      alert('今日總時數已紀錄！');
+      this.saveState(); this.renderHoursPage(); this.dom.manualInput.value = ''; alert('今日總時數已紀錄！');
     }
   },
 
   calcTotalHours() {
     let total = 0;
     Object.values(this.state.punchRecords).forEach(day => {
-      if (day.manualTotal > 0) { 
-        total += day.manualTotal; 
-      } else if (day.records) {
+      if (day.manualTotal > 0) total += day.manualTotal; 
+      else if (day.records) {
         day.records.forEach(r => {
           if (r.out) {
             const [ih, im] = r.in.split(':').map(Number); 
@@ -359,13 +307,34 @@ const APP = {
     return total;
   },
 
+  // === 記帳核心邏輯更新 ===
+  changeExpenseMonth(offset) {
+    if (!this.state.currentExpenseMonth) return;
+    let [year, month] = this.state.currentExpenseMonth.split('-').map(Number);
+    
+    month += offset;
+    if (month > 12) { month = 1; year++; }
+    else if (month < 1) { month = 12; year--; }
+    
+    this.state.currentExpenseMonth = `${year}-${String(month).padStart(2, '0')}`;
+    this.saveState();
+    this.renderExpenses();
+  },
+
   addExpenseRecord(desc, amount) {
+    const today = this.getTodayStr(); // "YYYY-MM-DD"
+    const currentIsoMonth = today.slice(0, 7); // "YYYY-MM"
+    
     this.state.expenses.push({ 
       id: Date.now(), 
       desc, 
       amount, 
-      date: this.getNowString() 
+      date: this.getNowString(),
+      isoMonth: currentIsoMonth // 加入這個欄位方便以後過濾
     });
+    
+    // 記帳後自動跳回「本月」檢視
+    this.state.currentExpenseMonth = currentIsoMonth;
     this.saveState(); 
     this.renderExpenses();
   },
@@ -380,7 +349,7 @@ const APP = {
         this.renderExpenses(); 
       }
     } catch (e) {
-      console.warn('匯率更新失敗，使用快取匯率');
+      console.warn('匯率更新失敗');
     }
   },
 
@@ -400,13 +369,10 @@ const APP = {
 
   renderHoursPage() {
     if (!this.dom.secRealtime || !this.dom.secManual) return;
-
     if (this.state.punchMode === 'manual') {
-      this.dom.secRealtime.style.display = 'none'; 
-      this.dom.secManual.style.display = 'block';
+      this.dom.secRealtime.style.display = 'none'; this.dom.secManual.style.display = 'block';
     } else {
-      this.dom.secRealtime.style.display = 'block'; 
-      this.dom.secManual.style.display = 'none';
+      this.dom.secRealtime.style.display = 'block'; this.dom.secManual.style.display = 'none';
     }
 
     const today = this.getTodayStr();
@@ -414,50 +380,43 @@ const APP = {
     let punchHtml = '<p style="margin:0; font-size:0.9rem; color:var(--text-muted);">今日狀態：</p>';
     
     if (todayData) {
-      if (todayData.manualTotal > 0) {
-        punchHtml += `<strong>已手動紀錄 ${todayData.manualTotal} 小時</strong>`;
-      } else {
-        todayData.records.forEach(r => {
-          punchHtml += `<div>進: ${r.in} - 出: ${r.out || '進行中'}</div>`;
-        });
-      }
-    } else { 
-      punchHtml += '尚未記錄'; 
-    }
+      if (todayData.manualTotal > 0) punchHtml += `<strong>已手動紀錄 ${todayData.manualTotal} 小時</strong>`;
+      else todayData.records.forEach(r => { punchHtml += `<div>進: ${r.in} - 出: ${r.out || '進行中'}</div>`; });
+    } else { punchHtml += '尚未記錄'; }
     this.dom.todayPunchList.innerHTML = punchHtml;
 
     const total = this.calcTotalHours();
-    const displayElem = document.getElementById('hours-display');
-    if (displayElem) displayElem.textContent = total.toFixed(1);
-    
-    const targetLabel = this.state.hoursTargetMode === 'total' ? '總工時目標' : '月度工時目標';
-    const labelElem = document.getElementById('hours-target-label');
-    if (labelElem) labelElem.textContent = targetLabel;
-
-    const hintElem = document.getElementById('hours-hint');
-    if (hintElem) hintElem.textContent = `目標 ${this.state.hoursTarget} 小時`;
+    if (document.getElementById('hours-display')) document.getElementById('hours-display').textContent = total.toFixed(1);
+    if (document.getElementById('hours-target-label')) document.getElementById('hours-target-label').textContent = this.state.hoursTargetMode === 'total' ? '總工時目標' : '月度工時目標';
+    if (document.getElementById('hours-hint')) document.getElementById('hours-hint').textContent = `目標 ${this.state.hoursTarget} 小時`;
     
     const pct = Math.min(100, Math.round((total / this.state.hoursTarget) * 100));
-    const textElem = document.getElementById('progress-hours-text');
-    if (textElem) textElem.textContent = `${total.toFixed(1)}/${this.state.hoursTarget} 小時`;
-
-    const barElem = document.getElementById('progress-hours');
-    if (barElem) barElem.style.width = `${pct}%`;
+    if (document.getElementById('progress-hours-text')) document.getElementById('progress-hours-text').textContent = `${total.toFixed(1)}/${this.state.hoursTarget} 小時`;
+    if (document.getElementById('progress-hours')) document.getElementById('progress-hours').style.width = `${pct}%`;
   },
 
   renderExpenses() {
-    const totalJpy = this.state.expenses.reduce((sum, e) => sum + e.amount, 0);
+    // 1. 更新月份標題
+    if (this.dom.monthDisplay && this.state.currentExpenseMonth) {
+      const [year, month] = this.state.currentExpenseMonth.split('-');
+      this.dom.monthDisplay.textContent = `${year}年${parseInt(month)}月`;
+    }
+
+    // 2. 過濾出該月份的資料 (相容舊資料)
+    const monthlyData = this.state.expenses.filter(e => {
+      const eMonth = e.isoMonth || this.state.currentExpenseMonth; // 若舊資料無 isoMonth，當作本月
+      return eMonth === this.state.currentExpenseMonth;
+    });
+
+    // 3. 計算本月總額
+    const totalJpy = monthlyData.reduce((sum, e) => sum + e.amount, 0);
     const totalNtd = Math.round(totalJpy * this.state.exchangeRate);
     
-    const jpyElem = document.getElementById('expense-jpy');
-    if (jpyElem) jpyElem.textContent = `￥${totalJpy}`;
+    if (document.getElementById('expense-jpy')) document.getElementById('expense-jpy').textContent = `￥${totalJpy}`;
+    if (document.getElementById('expense-ntd')) document.getElementById('expense-ntd').textContent = `NT$${totalNtd}`;
+    if (document.getElementById('progress-expense-text')) document.getElementById('progress-expense-text').textContent = `￥${totalJpy} / NT$${totalNtd}`;
 
-    const ntdElem = document.getElementById('expense-ntd');
-    if (ntdElem) ntdElem.textContent = `NT$${totalNtd}`;
-
-    const progTextElem = document.getElementById('progress-expense-text');
-    if (progTextElem) progTextElem.textContent = `￥${totalJpy} / NT$${totalNtd}`;
-
+    // 4. 渲染快捷鍵
     if (this.dom.expQuickBox) {
       this.dom.expQuickBox.innerHTML = '';
       this.state.quickExpenses.forEach(q => {
@@ -467,6 +426,37 @@ const APP = {
         btn.addEventListener('click', () => this.addExpenseRecord(q.label, q.amount));
         this.dom.expQuickBox.appendChild(btn);
       });
+    }
+
+    // 5. 渲染本月明細列表
+    if (this.dom.monthlyExpenseList) {
+      this.dom.monthlyExpenseList.innerHTML = '';
+      
+      if (monthlyData.length === 0) {
+         this.dom.monthlyExpenseList.innerHTML = '<div style="text-align:center; padding: 24px; color: var(--text-muted);">本月尚無記帳紀錄</div>';
+      } else {
+         // 反轉陣列讓最新的一筆在最上面
+         [...monthlyData].reverse().forEach(e => {
+            const realIndex = this.state.expenses.findIndex(x => x.id === e.id);
+            
+            const div = document.createElement('div');
+            div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border);";
+            div.innerHTML = `
+              <div>
+                <div style="font-weight: 600; font-size: 1rem; color: var(--text);">${escapeHtml(e.desc)}</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">${e.date}</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 16px;">
+                <strong style="font-size: 1.2rem; color: var(--text);">￥${e.amount}</strong>
+                <button class="btn-icon" style="color: var(--danger); font-size: 1.1rem; padding: 4px;" onclick="APP.deleteItem('expenses', ${realIndex})">🗑️</button>
+              </div>
+            `;
+            this.dom.monthlyExpenseList.appendChild(div);
+         });
+         
+         // 移除最後一項的底線
+         this.dom.monthlyExpenseList.lastChild.style.borderBottom = 'none';
+      }
     }
   },
 
@@ -483,16 +473,7 @@ const APP = {
       
       const row = document.createElement('div'); 
       row.className = `reminder-item ${isUrgent ? 'urgent' : ''}`;
-      row.innerHTML = `
-        <div class="reminder-text">
-          <h4>${escapeHtml(r.title)}</h4>
-          <p>${r.date} (${status})</p>
-        </div>
-        <div>
-          <button class="btn-icon" style="color:var(--primary);" onclick="APP.editReminder(${idx})">✏️</button>
-          <button class="btn-icon" style="color:var(--danger);" onclick="APP.deleteItem('reminders', ${idx})">🗑️</button>
-        </div>
-      `;
+      row.innerHTML = `<div class="reminder-text"><h4>${escapeHtml(r.title)}</h4><p>${r.date} (${status})</p></div><div><button class="btn-icon" style="color:var(--primary);" onclick="APP.editReminder(${idx})">✏️</button> <button class="btn-icon" style="color:var(--danger);" onclick="APP.deleteItem('reminders', ${idx})">🗑️</button></div>`;
       fullList.appendChild(row);
     });
   },
@@ -505,7 +486,6 @@ const APP = {
     
     this.state.checklist.forEach(c => {
       if (c.checked) checked++;
-      
       const msDiff = new Date(c.date) - new Date();
       const d = Math.ceil(msDiff / 86400000);
       const isUrgent = (!c.checked && d <= 30 && d >= 0); 
@@ -513,28 +493,13 @@ const APP = {
 
       const lbl = document.createElement('label'); 
       lbl.className = `checklist-item ${isUrgent ? 'urgent' : ''}`;
-      lbl.innerHTML = `
-        <input type="checkbox" ${c.checked ? 'checked' : ''}>
-        <div>
-          <span>${escapeHtml(c.label)}</span>
-          <span class="checklist-item-meta">${status}</span>
-        </div>
-      `;
-      
-      lbl.querySelector('input').addEventListener('change', e => { 
-        c.checked = e.target.checked; 
-        this.saveState(); 
-        this.updateDashboard(); 
-        this.renderChecklist(); 
-      });
+      lbl.innerHTML = `<input type="checkbox" ${c.checked ? 'checked' : ''}><div><span>${escapeHtml(c.label)}</span><span class="checklist-item-meta">${status}</span></div>`;
+      lbl.querySelector('input').addEventListener('change', e => { c.checked = e.target.checked; this.saveState(); this.updateDashboard(); this.renderChecklist(); });
       cl.appendChild(lbl);
     });
 
-    const progText = document.getElementById('progress-checklist-text');
-    if (progText) progText.textContent = `${checked}/${this.state.checklist.length} 項`;
-
-    const progBar = document.getElementById('progress-checklist');
-    if (progBar) progBar.style.width = `${Math.round((checked / this.state.checklist.length) * 100)}%`;
+    if (document.getElementById('progress-checklist-text')) document.getElementById('progress-checklist-text').textContent = `${checked}/${this.state.checklist.length} 項`;
+    if (document.getElementById('progress-checklist')) document.getElementById('progress-checklist').style.width = `${Math.round((checked / this.state.checklist.length) * 100)}%`;
   },
 
   updateDashboard() {
@@ -545,12 +510,8 @@ const APP = {
       const passed = Math.max(0, Math.ceil(msPassed / 86400000));
       
       const pct = Math.min(100, Math.round((passed / total) * 100));
-      
-      const progText = document.getElementById('progress-text');
-      if (progText) progText.textContent = `${pct}%`;
-
-      const progMain = document.getElementById('progress-main');
-      if (progMain) progMain.style.width = `${pct}%`;
+      if (document.getElementById('progress-text')) document.getElementById('progress-text').textContent = `${pct}%`;
+      if (document.getElementById('progress-main')) document.getElementById('progress-main').style.width = `${pct}%`;
     }
     
     const dashList = document.getElementById('dash-reminders');
@@ -558,33 +519,17 @@ const APP = {
     dashList.innerHTML = '';
     
     const urgents = [];
-    
     this.state.checklist.forEach(c => { 
-      if (!c.checked) { 
-        const d = Math.ceil((new Date(c.date) - new Date()) / 86400000); 
-        if (d <= 30 && d >= 0) urgents.push({ title: c.label, days: d, type: '重要文件' }); 
-      }
+      if (!c.checked) { const d = Math.ceil((new Date(c.date) - new Date()) / 86400000); if (d <= 30 && d >= 0) urgents.push({ title: c.label, days: d, type: '重要文件' }); }
     });
-    
     this.state.reminders.forEach(r => { 
-      const d = Math.ceil((new Date(r.date) - new Date()) / 86400000); 
-      if (d <= 30 && d >= 0) urgents.push({ title: r.title, days: d, type: '重要提醒' }); 
+      const d = Math.ceil((new Date(r.date) - new Date()) / 86400000); if (d <= 30 && d >= 0) urgents.push({ title: r.title, days: d, type: '近期提醒' }); 
     });
     
     urgents.sort((a, b) => a.days - b.days).slice(0, 4).forEach(u => {
-      dashList.innerHTML += `
-        <div class="reminder-item urgent">
-          <div class="reminder-text">
-            <h4>${escapeHtml(u.title)}</h4>
-            <p>⚠️ ${u.type} - 剩 ${u.days} 天</p>
-          </div>
-        </div>
-      `;
+      dashList.innerHTML += `<div class="reminder-item urgent"><div class="reminder-text"><h4>${escapeHtml(u.title)}</h4><p>⚠️ ${u.type} - 剩 ${u.days} 天</p></div></div>`;
     });
-
-    if (urgents.length === 0) {
-      dashList.innerHTML = '<p style="color:gray; font-size:0.9rem; padding:10px;">目前無 30 天內即將到期的任務，請繼續保持！</p>';
-    }
+    if (urgents.length === 0) dashList.innerHTML = '<p style="color:gray; font-size:0.9rem; padding:10px;">目前無 30 天內即將到期的任務，請繼續保持！</p>';
   },
 
   openModal(type) {
@@ -594,272 +539,101 @@ const APP = {
 
     if (type === 'punch') {
       this.dom.modalTitle.textContent = '打卡歷史紀錄';
-      const sortedDates = Object.keys(this.state.punchRecords).sort().reverse();
-      
-      sortedDates.forEach(date => {
-        const day = this.state.punchRecords[date]; 
-        const div = document.createElement('div'); 
-        div.className = 'history-card'; 
-        
+      Object.keys(this.state.punchRecords).sort().reverse().forEach(date => {
+        const day = this.state.punchRecords[date]; const div = document.createElement('div'); div.className = 'history-card'; 
         let html = `<p><strong>${date}</strong></p>`;
-        if (day.manualTotal > 0) {
-          html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
-        } else {
-          day.records.forEach((r, i) => { 
-            html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`; 
-          });
-        }
-        
-        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`; 
-        div.innerHTML = html; 
-        this.dom.modalBody.appendChild(div);
+        if (day.manualTotal > 0) html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
+        else day.records.forEach((r, i) => { html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`; });
+        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`; div.innerHTML = html; this.dom.modalBody.appendChild(div);
       });
-
-    } else if (type === 'expense') {
-      this.dom.modalTitle.textContent = '記帳明細歷史';
-      [...this.state.expenses].reverse().forEach((e, revIdx) => { 
-        const idx = this.state.expenses.length - 1 - revIdx; 
-        const div = document.createElement('div'); 
-        div.className = 'history-card'; 
-        div.innerHTML = `
-          <p style="color:gray; font-size:0.8rem;">${e.date}</p>
-          <p><strong>${escapeHtml(e.desc)}</strong>：￥${e.amount}</p>
-          <div class="history-actions">
-            <button class="btn btn-sm danger" onclick="APP.deleteItem('expenses', ${idx}, 'expense')">刪除</button>
-          </div>
-        `; 
-        this.dom.modalBody.appendChild(div); 
-      });
-
     } else if (type === 'quickExpense') {
       this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
       this.state.quickExpenses.forEach((q, idx) => { 
-        const div = document.createElement('div'); 
-        div.className = 'history-card'; 
-        div.innerHTML = `
-          <p>${q.label} (￥${q.amount})</p>
-          <div class="history-actions">
-            <button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button> 
-            <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button>
-          </div>
-        `; 
-        this.dom.modalBody.appendChild(div); 
+        const div = document.createElement('div'); div.className = 'history-card'; 
+        div.innerHTML = `<p>${q.label} (￥${q.amount})</p><div class="history-actions"><button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button></div>`; this.dom.modalBody.appendChild(div); 
       });
-      
-      const addBtn = document.createElement('button'); 
-      addBtn.className = 'btn secondary'; 
-      addBtn.textContent = '+ 新增快捷鍵'; 
-      addBtn.onclick = () => { 
-        const label = prompt('按鈕名稱 (例: 咖啡)'); 
-        if (!label) return; 
-        const amount = Number(prompt('金額')); 
-        if (amount) { 
-          this.state.quickExpenses.push({ id: Date.now(), label, amount }); 
-          this.saveState(); 
-          this.renderExpenses(); 
-          this.openModal('quickExpense'); 
-        } 
-      }; 
-      this.dom.modalBody.appendChild(addBtn);
-
+      const addBtn = document.createElement('button'); addBtn.className = 'btn secondary'; addBtn.textContent = '+ 新增快捷鍵'; 
+      addBtn.onclick = () => { const label = prompt('按鈕名稱 (例: 咖啡)'); if (!label) return; const amount = Number(prompt('金額')); if (amount) { this.state.quickExpenses.push({ id: Date.now(), label, amount }); this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); } }; this.dom.modalBody.appendChild(addBtn);
     } else if (type === 'note' || type === 'journal') {
       this.dom.modalTitle.textContent = type === 'note' ? '歷史備註' : '歷史週誌'; 
       const targetArr = this.state[type + 's'];
-      
       [...targetArr].reverse().forEach((item, revIdx) => { 
-        const idx = targetArr.length - 1 - revIdx; 
-        const div = document.createElement('div'); 
-        div.className = 'history-card'; 
-        const title = type === 'journal' ? `第 ${item.week} 週` : ''; 
-        
-        div.innerHTML = `
-          <p><strong>${title}</strong> <span style="font-size:0.8rem; color:gray;">${item.date}</span></p>
-          <p style="white-space:pre-wrap;">${escapeHtml(item.text)}</p>
-          <div class="history-actions">
-            ${type === 'journal' ? `<button class="btn btn-sm secondary" onclick="APP.exportJournal(${idx})">匯出 PDF</button>` : ''} 
-            <button class="btn btn-sm secondary" onclick="APP.editTextItem('${type}s', ${idx}, '${type}')">編輯</button> 
-            <button class="btn btn-sm danger" onclick="APP.deleteItem('${type}s', ${idx}, '${type}')">刪除</button>
-          </div>
-        `; 
-        this.dom.modalBody.appendChild(div); 
+        const idx = targetArr.length - 1 - revIdx; const div = document.createElement('div'); div.className = 'history-card'; const title = type === 'journal' ? `第 ${item.week} 週` : ''; 
+        div.innerHTML = `<p><strong>${title}</strong> <span style="font-size:0.8rem; color:gray;">${item.date}</span></p><p style="white-space:pre-wrap;">${escapeHtml(item.text)}</p><div class="history-actions">${type === 'journal' ? `<button class="btn btn-sm secondary" onclick="APP.exportJournal(${idx})">匯出 PDF</button>` : ''} <button class="btn btn-sm secondary" onclick="APP.editTextItem('${type}s', ${idx}, '${type}')">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('${type}s', ${idx}, '${type}')">刪除</button></div>`; this.dom.modalBody.appendChild(div); 
       });
     }
   },
 
   deleteItem(arrayName, index, modalToReopen) { 
-    if (confirm('確定刪除？')) { 
-      this.state[arrayName].splice(index, 1); 
-      this.saveState(); 
-      this.renderAll(); 
-      if (modalToReopen) this.openModal(modalToReopen); 
-    } 
+    if (confirm('確定刪除？')) { this.state[arrayName].splice(index, 1); this.saveState(); this.renderAll(); if (modalToReopen) this.openModal(modalToReopen); } 
   },
   
   editTextItem(arrayName, index, modalToReopen) { 
     const newText = prompt('請修改內容:', this.state[arrayName][index].text); 
-    if (newText) { 
-      this.state[arrayName][index].text = newText; 
-      this.saveState(); 
-      this.renderAll(); 
-      this.openModal(modalToReopen); 
-    } 
+    if (newText) { this.state[arrayName][index].text = newText; this.saveState(); this.renderAll(); this.openModal(modalToReopen); } 
   },
 
   editReminder(index) { 
     const r = this.state.reminders[index]; 
-    const newTitle = prompt('修改提醒標題:', r.title); 
-    if (newTitle) r.title = newTitle; 
-    
-    const newDate = prompt('修改日期 (YYYY-MM-DD):', r.date); 
-    if (newDate) r.date = newDate; 
-    
-    this.saveState(); 
-    this.renderReminders(); 
-    this.updateDashboard(); 
+    const newTitle = prompt('修改提醒標題:', r.title); if (newTitle) r.title = newTitle; 
+    const newDate = prompt('修改日期 (YYYY-MM-DD):', r.date); if (newDate) r.date = newDate; 
+    this.saveState(); this.renderReminders(); this.updateDashboard(); 
   },
 
   editQuickExpense(index) { 
     const q = this.state.quickExpenses[index]; 
-    const newLabel = prompt('名稱:', q.label); 
-    if (newLabel) q.label = newLabel; 
-    
-    const newAmt = Number(prompt('金額:', q.amount)); 
-    if (newAmt) q.amount = newAmt; 
-    
-    this.saveState(); 
-    this.renderExpenses(); 
-    this.openModal('quickExpense'); 
+    const newLabel = prompt('名稱:', q.label); if (newLabel) q.label = newLabel; 
+    const newAmt = Number(prompt('金額:', q.amount)); if (newAmt) q.amount = newAmt; 
+    this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); 
   },
 
   editPunch(date, idx) { 
     const rec = this.state.punchRecords[date].records[idx]; 
-    const i = prompt('進 (HH:MM)', rec.in); 
-    if (i) rec.in = i; 
-    
-    const o = prompt('出 (HH:MM)', rec.out || ''); 
-    if (o !== null) rec.out = o; 
-    
-    this.saveState(); 
-    this.renderHoursPage(); 
-    this.openModal('punch'); 
+    const i = prompt('進 (HH:MM)', rec.in); if (i) rec.in = i; 
+    const o = prompt('出 (HH:MM)', rec.out || ''); if (o !== null) rec.out = o; 
+    this.saveState(); this.renderHoursPage(); this.openModal('punch'); 
   },
 
   editManualPunch(date) { 
     const h = Number(prompt('修改手動總時數', this.state.punchRecords[date].manualTotal)); 
-    if (h > 0) { 
-      this.state.punchRecords[date].manualTotal = h; 
-      this.saveState(); 
-      this.renderHoursPage(); 
-      this.openModal('punch'); 
-    } 
+    if (h > 0) { this.state.punchRecords[date].manualTotal = h; this.saveState(); this.renderHoursPage(); this.openModal('punch'); } 
   },
 
   deletePunchDay(date) { 
-    if (confirm('確定要刪除這天的所有打卡紀錄嗎？')) { 
-      delete this.state.punchRecords[date]; 
-      this.saveState(); 
-      this.renderHoursPage(); 
-      this.openModal('punch'); 
-    } 
+    if (confirm('確定要刪除這天的所有打卡紀錄嗎？')) { delete this.state.punchRecords[date]; this.saveState(); this.renderHoursPage(); this.openModal('punch'); } 
   },
 
   exportJournal(index) { 
-    const j = this.state.journals[index]; 
-    const win = window.open('', '_blank'); 
-    win.document.write(`
-      <html>
-        <head>
-          <title>第 ${j.week} 週週誌</title>
-        </head>
-        <body style="font-family: sans-serif; padding: 40px; line-height: 1.8;">
-          <h2>第 ${j.week} 週實習週誌</h2>
-          <hr>
-          <p style="white-space: pre-wrap;">${escapeHtml(j.text)}</p>
-        </body>
-      </html>
-    `); 
-    win.document.close(); 
+    const j = this.state.journals[index]; const win = window.open('', '_blank'); win.document.write(`<html><head><title>第 ${j.week} 週週誌</title></head><body style="font-family: sans-serif; padding: 40px; line-height: 1.8;"><h2>第 ${j.week} 週實習週誌</h2><hr><p style="white-space: pre-wrap;">${escapeHtml(j.text)}</p></body></html>`); win.document.close(); 
   },
   
   exportData() { 
-    const blob = new Blob([JSON.stringify(this.state, null, 2)], { type: 'application/json' }); 
-    const a = document.createElement('a'); 
-    a.href = URL.createObjectURL(blob); 
-    a.download = `intern-backup-${this.getTodayStr()}.json`; 
-    a.click(); 
+    const blob = new Blob([JSON.stringify(this.state, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `intern-backup-${this.getTodayStr()}.json`; a.click(); 
   },
   
   importData(event) { 
-    const file = event.target.files?.[0]; 
-    if (!file) return; 
-    const reader = new FileReader(); 
-    reader.onload = e => { 
-      try { 
-        const data = JSON.parse(e.target.result); 
-        this.state = { ...this.state, ...data }; 
-        this.saveState(); 
-        this.renderAll(); 
-        alert('資料匯入成功！'); 
-      } catch { 
-        alert('檔案格式錯誤，匯入失敗。'); 
-      } 
-    }; 
-    reader.readAsText(file); 
+    const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = e => { try { const data = JSON.parse(e.target.result); this.state = { ...this.state, ...data }; this.saveState(); this.renderAll(); alert('資料匯入成功！'); } catch { alert('檔案格式錯誤，匯入失敗。'); } }; reader.readAsText(file); 
   },
 
-  // 雲端與本機雙重儲存機制
   async saveState() { 
     this.saveStateLocally();
-    if (this.firebaseUser) {
-      try {
-        await setDoc(doc(db, "users", this.firebaseUser.uid), this.state);
-      } catch (e) {
-        console.error('同步雲端失敗', e);
-      }
-    }
+    if (this.firebaseUser) { try { await setDoc(doc(db, "users", this.firebaseUser.uid), this.state); } catch (e) { console.error('同步雲端失敗', e); } }
   },
 
-  saveStateLocally() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state)); 
-  },
+  saveStateLocally() { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state)); },
   
-  loadLocalState() { 
-    const s = localStorage.getItem(STORAGE_KEY); 
-    if (s) {
-      try { 
-        this.state = { ...this.state, ...JSON.parse(s) }; 
-      } catch(e) {} 
-    }
-  },
+  loadLocalState() { const s = localStorage.getItem(STORAGE_KEY); if (s) { try { this.state = { ...this.state, ...JSON.parse(s) }; } catch(e) {} } },
 
   async loadCloudState(user) {
     try {
       const docSnap = await getDoc(doc(db, "users", user.uid));
-      if (docSnap.exists()) {
-        this.state = { ...this.state, ...docSnap.data() };
-        this.state.user = { isLoggedIn: true, name: user.displayName };
-      } else {
-        // 第一次登入，把本機資料傳上去
-        this.state.user = { isLoggedIn: true, name: user.displayName };
-        await this.saveState();
-      }
-    } catch (e) {
-      console.error("讀取雲端資料失敗", e);
-    }
+      if (docSnap.exists()) { this.state = { ...this.state, ...docSnap.data() }; this.state.user = { isLoggedIn: true, name: user.displayName }; } 
+      else { this.state.user = { isLoggedIn: true, name: user.displayName }; await this.saveState(); }
+    } catch (e) { console.error("讀取雲端資料失敗", e); }
   }
 };
 
-function escapeHtml(text) { 
-  const div = document.createElement('div'); 
-  div.textContent = text; 
-  return div.innerHTML; 
-}
+function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
 window.APP = APP; 
-
-// 檢查：如果網頁早就載入完了，就直接啟動大腦；如果還沒，才等待載入完畢的事件
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => APP.init());
-} else {
-  APP.init();
-}
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', () => APP.init()); } else { APP.init(); }

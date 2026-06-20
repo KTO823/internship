@@ -173,8 +173,15 @@
           <button class="btn-menu">☰</button>
         </div>
         <div class="page-content">
+
+          <div class="card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 16px;">
+            <button class="btn-icon" id="btn-prev-month" style="font-size: 1.2rem; padding: 8px 16px; background: var(--primary-light); border-radius: 8px; color: var(--primary);">◀</button>
+            <strong id="current-month-display" style="font-size: 1.2rem;">載入中...</strong>
+            <button class="btn-icon" id="btn-next-month" style="font-size: 1.2rem; padding: 8px 16px; background: var(--primary-light); border-radius: 8px; color: var(--primary);">▶</button>
+          </div>
+
           <div class="card">
-            <h2>總花費</h2>
+            <h2 style="margin-top: 0; text-align: center; color: var(--text-muted); font-size: 0.95rem;">本月總支出</h2>
             <div class="expense-display">
               <div class="currency">
                 <span class="label">日幣</span>
@@ -186,13 +193,12 @@
                 <strong id="expense-ntd">NT$0</strong>
               </div>
             </div>
-            <button class="btn secondary btn-sm" id="btn-manage-expense" style="width:100%; margin-top:12px;">查看記帳明細</button>
           </div>
 
           <section class="section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
               <h2 style="margin:0;">快速記帳</h2>
-              <button class="btn-icon" id="btn-edit-quick-expense" style="font-size:0.9rem; color:var(--primary);">設定快捷鍵 ⚙️</button>
+              <button class="btn-icon" id="btn-edit-quick-expense" style="font-size:0.9rem; color:var(--primary);">編輯快捷鍵 ⚙️</button>
             </div>
             <div class="card">
               <div class="expense-buttons" id="expense-quick-buttons"></div>
@@ -200,11 +206,19 @@
           </section>
 
           <section class="section">
-            <h2>自訂金額記帳</h2>
+            <h2>自訂金額</h2>
             <div class="card input-group">
               <input type="text" id="expense-custom-desc" placeholder="買了什麼？ (例如: 午餐)" />
               <input type="number" id="expense-custom" placeholder="輸入日幣金額" min="0" step="10" />
               <button class="btn" id="expense-add">記帳</button>
+            </div>
+          </section>
+
+          <section class="section" style="margin-bottom: 40px;">
+            <h2>本月明細</h2>
+            <div class="card" style="padding: 16px;">
+              <div id="monthly-expense-list" style="display: flex; flex-direction: column; gap: 0;">
+                </div>
             </div>
           </section>
         </div>
