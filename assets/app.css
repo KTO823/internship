@@ -619,27 +619,27 @@ body.theme-neon-sakura {
   background-image: none;
 }
 
-/* 3. 200天獎勵：蒔繪金箔 (加強菱格紋金線亮度與頂部光暈) */
+/* 3. 200天獎勵：蒔繪金箔 (終極顯色版：加強金線濃度與質感) */
 body.theme-makie-gold {
   --primary: #c5a059; 
-  --primary-light: rgba(197, 160, 89, 0.1);
+  --primary-light: rgba(197, 160, 89, 0.15);
   --bg: #121212; 
   --surface: #1e1e1e; 
   --text: #f0eedf; --text-muted: #a39c87; --border: rgba(197, 160, 89, 0.3);
-  --danger-bg: rgba(197, 160, 89, 0.08); --danger-text: #e6ce98; --danger-border: rgba(197, 160, 89, 0.4);
+  --danger-bg: rgba(197, 160, 89, 0.1); --danger-text: #e6ce98; --danger-border: rgba(197, 160, 89, 0.4);
   background-color: #121212 !important;
-  /* 增加頂部打光，並把金線透明度提高到 12% 讓肉眼可見 */
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.15), transparent 60%),
-    linear-gradient(45deg, rgba(212, 175, 55, 0.12) 1px, transparent 1px),
-    linear-gradient(-45deg, rgba(212, 175, 55, 0.12) 1px, transparent 1px) !important;
-  background-size: 100% 100%, 30px 30px, 30px 30px !important;
   background-attachment: fixed !important;
+  /* 1. 頂部打光範圍加大 2. 金線透明度暴增至 40% 3. 菱格紋放大至 40px */
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.2), transparent 70%),
+    linear-gradient(45deg, rgba(212, 175, 55, 0.4) 1px, transparent 1px),
+    linear-gradient(-45deg, rgba(212, 175, 55, 0.4) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 40px 40px, 40px 40px !important;
 }
 
 /* 4. 300天獎勵：幻光星海 (修復 SVG 破圖問題，加強極光亮度) */
 body.theme-aurora-stage {
-  --primary: #4dd0e1; 
+  --primary: #416dc0; 
   --primary-light: rgba(77, 208, 225, 0.15);
   --bg: #0a0e17; 
   --surface: #131926; 
