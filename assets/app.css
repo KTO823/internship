@@ -727,7 +727,7 @@ body.theme-monochrome .icon-checkin::before { content: '✓'; }
 
 /* --- 3. 100天獎勵：夜櫻霓虹的圖示 (滿滿櫻花感) --- */
 body.theme-neon-sakura .icon-settings::before { content: '🌸'; }
-body.theme-neon-sakura .icon-checkin::before { content: '✨'; }
+body.theme-neon-sakura .icon-checkin::before { content: '🍡'; }
 
 /* --- 4. 200天獎勵：蒔繪金箔的圖示 (日系奢華風) --- */
 body.theme-makie-gold .icon-settings::before { content: '🔱'; }
