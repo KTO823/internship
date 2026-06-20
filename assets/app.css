@@ -637,20 +637,20 @@ body.theme-makie-gold {
   background-size: 100% 100%, 40px 40px, 40px 40px !important;
 }
 
-/* 4. 300天獎勵：幻光星海 (修復 SVG 破圖問題，加強極光亮度) */
+/* 4. 300天獎勵：幻光星海 (降亮度，改為高質感星雲深藍) */
 body.theme-aurora-stage {
-  --primary: #8ee3ef; 
-  --primary-light: rgba(77, 208, 225, 0.15);
-  --bg: #0a0e17; 
-  --surface: #131926; 
-  --text: #e0f2f1; --text-muted: #78929c; --border: rgba(77, 208, 225, 0.25);
-  --danger-bg: rgba(77, 208, 225, 0.1); --danger-text: #8ee3ef; --danger-border: rgba(77, 208, 225, 0.3);
-  background-color: #0a0e17 !important;
+  --primary: #3b7696; /* 柔和、有質感的星雲深藍，不再刺眼 */
+  --primary-light: rgba(59, 118, 150, 0.2);
+  --bg: #080b12; /* 再稍微加深一點點背景，讓對比更穩重 */
+  --surface: #111723; /* 卡片底色微調 */
+  --text: #d8e8e8; --text-muted: #6b828c; --border: rgba(59, 118, 150, 0.35);
+  --danger-bg: rgba(59, 118, 150, 0.15); --danger-text: #7bc5d4; --danger-border: rgba(59, 118, 150, 0.4);
+  background-color: #080b12 !important;
   background-attachment: fixed !important;
-  /* 修正 SVG 編碼，並調亮極光漸層 */
+  /* 柔和的極光漸層 + 隨機散落的文字符號星星 */
   background-image: 
-    radial-gradient(circle at 15% 20%, rgba(77, 208, 225, 0.18), transparent 50%),
-    radial-gradient(circle at 85% 80%, rgba(126, 87, 194, 0.18), transparent 50%),
+    radial-gradient(circle at 15% 20%, rgba(59, 118, 150, 0.15), transparent 50%),
+    radial-gradient(circle at 85% 80%, rgba(100, 75, 150, 0.15), transparent 50%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Ctext x='40' y='60' fill='rgba(255,255,255,0.4)' font-size='16'%3E✦%3C/text%3E%3Ctext x='250' y='120' fill='rgba(255,255,255,0.5)' font-size='12'%3E⋆%3C/text%3E%3Ctext x='120' y='280' fill='rgba(255,255,255,0.3)' font-size='20'%3E✧%3C/text%3E%3Ctext x='320' y='320' fill='rgba(255,255,255,0.4)' font-size='14'%3E*%3C/text%3E%3Ctext x='180' y='180' fill='rgba(255,255,255,0.2)' font-size='10'%3E.%3C/text%3E%3Ctext x='350' y='50' fill='rgba(255,255,255,0.3)' font-size='12'%3E⋆%3C/text%3E%3Ctext x='50' y='350' fill='rgba(255,255,255,0.2)' font-size='16'%3E✦%3C/text%3E%3C/svg%3E") !important;
 }
 
@@ -709,7 +709,7 @@ body.theme-makie-gold .icon-checkin::before { content: '🖋️'; }
 
 /* --- 5. 300天獎勵：幻光星海的圖示 (宇宙科幻感) --- */
 body.theme-aurora-stage .icon-settings::before { content: '🪐'; }
-body.theme-aurora-stage .icon-checkin::before { content: '🚀'; }
+body.theme-aurora-stage .icon-checkin::before { content: '⭐'; }
 
 /* --- 🐾 獨立彩蛋：暖心柴柴版的圖示 (柴犬專屬！超可愛) --- */
 body.theme-shiba-gold .icon-settings::before { content: '🦴'; } /* 設定變成小骨頭！ */
