@@ -79,6 +79,14 @@
           <button class="mobile-settings-btn nav-item" data-page="settings">⚙️</button>
         </div>
         <div class="page-content">
+
+          <div class="card" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; padding: 16px;">
+            <div>
+              <h3 style="margin: 0; font-size: 1.1rem; color: var(--text);">每日簽到</h3>
+              <p id="checkin-status-text" style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">載入中...</p>
+            </div>
+            <button class="btn" id="btn-checkin" style="width: auto; padding: 8px 16px; margin: 0;">點我簽到 ✍️</button>
+          </div>
           
           <div class="card" style="margin-bottom: 20px;">
             <div class="progress-label-row">
@@ -341,6 +349,12 @@
               </div>
             </div>
           </section>
+
+          <div class="setting-row">
+            <label>個人化主題選擇 (簽到解鎖)</label>
+            <select id="settings-theme-select" class="styled-select">
+              </select>
+          </div>
           
           <section class="section" style="margin-bottom: 50px;">
             <h2>本機資料備份 (離線使用)</h2>

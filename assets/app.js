@@ -18,7 +18,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-const STORAGE_KEY = 'intern-dashboard-v7'; // 更新版本號
+const STORAGE_KEY = 'intern-dashboard-v8'; // 升級版本號以整合簽到與主題資料
 
 const APP = {
   state: {
@@ -29,11 +29,16 @@ const APP = {
     hoursTargetMode: 'monthly',
     hoursTarget: 160,
     exchangeRate: 0.21,
-    currentExpenseMonth: '', // 紀錄目前查看的記帳月份 (例如 "2026-06")
+    currentExpenseMonth: '',
     punchRecords: {},
     expenses: [],
     notes: [],
     journals: [],
+    // ⬇️ 新增：遊戲化簽到與主題系統變數
+    checkInCount: 0,
+    lastCheckInDate: '',
+    currentTheme: 'default',
+    unlockedThemes: ['default'],
     reminders: [
       { id: 'r1', title: '出國前準備：日幣 10 萬圓生活費', date: '2026-07-01' },
     ],
@@ -59,12 +64,13 @@ const APP = {
     this.setupListeners();
     this.loadLocalState();
     
-    // 初始化當前月份
     if (!this.state.currentExpenseMonth) {
       const d = new Date();
       this.state.currentExpenseMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
 
+    // 啟動時立刻套用目前選擇的主題配色
+    this.applyTheme();
     this.renderAll();
     this.fetchExchangeRate();
 
@@ -77,6 +83,7 @@ const APP = {
         if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = user.displayName;
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'none';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'block';
+        this.applyTheme();
         this.renderAll();
       } else {
         this.firebaseUser = null;
@@ -86,6 +93,7 @@ const APP = {
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'block';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'none';
         this.saveStateLocally(); 
+        this.applyTheme();
         this.renderAll();
       }
     });
@@ -117,7 +125,6 @@ const APP = {
       manualSubmit: document.getElementById('manual-hours-submit'),
       todayPunchList: document.getElementById('today-punch-list'),
       
-      // 記帳區元素更新
       expDesc: document.getElementById('expense-custom-desc'),
       expAmount: document.getElementById('expense-custom'),
       expAdd: document.getElementById('expense-add'),
@@ -126,6 +133,11 @@ const APP = {
       btnNextMonth: document.getElementById('btn-next-month'),
       monthDisplay: document.getElementById('current-month-display'),
       monthlyExpenseList: document.getElementById('monthly-expense-list'),
+      
+      // ⬇️ 新增：簽到與主題切換 DOM 節點
+      btnCheckIn: document.getElementById('btn-checkin'),
+      checkInStatusText: document.getElementById('checkin-status-text'),
+      themeSelect: document.getElementById('settings-theme-select'),
       
       modal: document.getElementById('modal-overlay'),
       modalClose: document.getElementById('modal-close'),
@@ -184,7 +196,6 @@ const APP = {
     if (this.dom.btnOut) this.dom.btnOut.addEventListener('click', () => this.handleRealtimePunch('out'));
     if (this.dom.manualSubmit) this.dom.manualSubmit.addEventListener('click', () => this.handleManualPunch());
 
-    // 月份切換監聽
     if (this.dom.btnPrevMonth) this.dom.btnPrevMonth.addEventListener('click', () => this.changeExpenseMonth(-1));
     if (this.dom.btnNextMonth) this.dom.btnNextMonth.addEventListener('click', () => this.changeExpenseMonth(1));
 
@@ -200,12 +211,32 @@ const APP = {
       });
     }
 
+    // ⬇️ 新增：點擊簽到監聽器
+    if (this.dom.btnCheckIn) {
+      this.dom.btnCheckIn.addEventListener('click', () => this.handleCheckIn());
+    }
+
+    // ⬇️ 新增：切換主題選單監聽器
+    if (this.dom.themeSelect) {
+      this.dom.themeSelect.addEventListener('change', (e) => {
+        this.state.currentTheme = e.target.value;
+        this.saveState();
+        this.applyTheme();
+      });
+    }
+
     const saveNoteBtn = document.getElementById('save-note');
     if (saveNoteBtn) {
       saveNoteBtn.addEventListener('click', () => {
         const noteInput = document.getElementById('quick-note');
         const text = noteInput.value.trim();
-        if (text) { this.state.notes.push({ id: Date.now(), text, date: this.getNowString() }); noteInput.value = ''; this.saveState(); alert('備註已儲存'); }
+        if (text) { 
+          this.state.notes.push({ id: Date.now(), text, date: this.getNowString() }); 
+          this.checkShibaEgg(text); // 檢查狗關鍵字彩蛋
+          noteInput.value = ''; 
+          this.saveState(); 
+          alert('備註已儲存'); 
+        }
       });
     }
 
@@ -214,7 +245,13 @@ const APP = {
       saveJournalBtn.addEventListener('click', () => {
         const journalInput = document.getElementById('weekly-journal');
         const text = journalInput.value.trim();
-        if (text) { this.state.journals.push({ id: Date.now(), week: this.getWeekNum(), text, date: this.getNowString() }); journalInput.value = ''; this.saveState(); alert('週誌已儲存'); }
+        if (text) { 
+          this.state.journals.push({ id: Date.now(), week: this.getWeekNum(), text, date: this.getNowString() }); 
+          this.checkShibaEgg(text); // 檢查狗關鍵字彩蛋
+          journalInput.value = ''; 
+          this.saveState(); 
+          alert('週誌已儲存'); 
+        }
       });
     }
 
@@ -233,7 +270,7 @@ const APP = {
     };
     
     bindModal('btn-manage-punch', 'punch');
-    bindModal('btn-manage-expense', 'expense'); // 👉 就是漏了這行！補上去！
+    bindModal('btn-manage-expense', 'expense');
     bindModal('btn-edit-quick-expense', 'quickExpense');
     bindModal('btn-manage-note', 'note');
     bindModal('btn-manage-journal', 'journal');
@@ -257,10 +294,7 @@ const APP = {
   
   getTodayStr() { 
     const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   },
   
   getWeekNum() { 
@@ -308,33 +342,27 @@ const APP = {
     return total;
   },
 
-  // === 記帳核心邏輯更新 ===
   changeExpenseMonth(offset) {
     if (!this.state.currentExpenseMonth) return;
     let [year, month] = this.state.currentExpenseMonth.split('-').map(Number);
-    
     month += offset;
     if (month > 12) { month = 1; year++; }
     else if (month < 1) { month = 12; year--; }
-    
     this.state.currentExpenseMonth = `${year}-${String(month).padStart(2, '0')}`;
     this.saveState();
     this.renderExpenses();
   },
 
   addExpenseRecord(desc, amount) {
-    const today = this.getTodayStr(); // "YYYY-MM-DD"
-    const currentIsoMonth = today.slice(0, 7); // "YYYY-MM"
-    
+    const today = this.getTodayStr();
+    const currentIsoMonth = today.slice(0, 7);
     this.state.expenses.push({ 
       id: Date.now(), 
       desc, 
       amount, 
       date: this.getNowString(),
-      isoMonth: currentIsoMonth // 加入這個欄位方便以後過濾
+      isoMonth: currentIsoMonth
     });
-    
-    // 記帳後自動跳回「本月」檢視
     this.state.currentExpenseMonth = currentIsoMonth;
     this.saveState(); 
     this.renderExpenses();
@@ -349,8 +377,64 @@ const APP = {
         this.saveStateLocally(); 
         this.renderExpenses(); 
       }
-    } catch (e) {
-      console.warn('匯率更新失敗');
+    } catch (e) { console.warn('匯率更新失敗'); }
+  },
+
+  // ⬇️ 新增：主動簽到處理大腦
+  handleCheckIn() {
+    const today = this.getTodayStr();
+    if (this.state.lastCheckInDate === today) {
+      alert('今天已經簽到過囉！明天再來吧！');
+      return;
+    }
+    
+    this.state.checkInCount++;
+    this.state.lastCheckInDate = today;
+    
+    let msg = `簽到成功！目前已累計簽到 ${this.state.checkInCount} 天！`;
+    
+    // 檢查解鎖門檻
+    if (this.state.checkInCount >= 14 && !this.state.unlockedThemes.includes('theme-monochrome')) {
+      this.state.unlockedThemes.push('theme-monochrome');
+      msg += '\n\n🎉 達成 14 天簽到！已解鎖主題「簡約黑白」！';
+    }
+    if (this.state.checkInCount >= 100 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
+      this.state.unlockedThemes.push('theme-neon-sakura');
+      msg += '\n\n🎉 達成 100 天簽到！已解鎖主題「夜櫻霓虹」！';
+    }
+    if (this.state.checkInCount >= 200 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
+      this.state.unlockedThemes.push('theme-makie-gold');
+      msg += '\n\n🎉 達成 200 天簽到！已解鎖主題「蒔繪金箔」！';
+    }
+    if (this.state.checkInCount >= 300 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
+      this.state.unlockedThemes.push('theme-aurora-stage');
+      msg += '\n\n🎉 達成 300 天簽到！已解鎖主題「幻光星海」！';
+    }
+    
+    alert(msg);
+    this.saveState();
+    this.renderAll();
+  },
+
+  // ⬇️ 新增：狗相關關鍵字彩蛋檢查器
+  checkShibaEgg(text) {
+    if (this.state.unlockedThemes.includes('theme-shiba-gold')) return;
+    
+    // 定義所有與狗有關的關鍵字群
+    const dogKeywords = ['狗', '犬', 'dog', '柴犬', 'shiba', '汪汪', '小狗', '因', 'puppy'];
+    const hasKeyword = dogKeywords.some(kw => text.toLowerCase().includes(kw));
+    
+    if (hasKeyword) {
+      this.state.unlockedThemes.push('theme-shiba-gold');
+      alert('🐾 隱藏彩蛋觸發！\n偵測到紀錄中包含狗的相關文字！已成功解鎖特殊單獨主題：「蒔繪金箔-柴犬版」！🐶✨\n可以去設定頁面切換看看囉！');
+    }
+  },
+
+  // ⬇️ 新增：套用 body class 主題樣式
+  applyTheme() {
+    document.body.classList.remove('theme-monochrome', 'theme-neon-sakura', 'theme-makie-gold', 'theme-aurora-stage', 'theme-shiba-gold');
+    if (this.state.currentTheme !== 'default') {
+      document.body.classList.add(this.state.currentTheme);
     }
   },
 
@@ -366,6 +450,55 @@ const APP = {
     this.renderReminders();
     this.renderChecklist();
     this.updateDashboard();
+    
+    // 渲染簽到狀態與設定頁的主題下拉選單
+    this.renderCheckInUI();
+    this.renderThemeSelectUI();
+  },
+
+  // ⬇️ 新增：渲染簽到按鈕外觀
+  renderCheckInUI() {
+    if (!this.dom.btnCheckIn || !this.dom.checkInStatusText) return;
+    const today = this.getTodayStr();
+    
+    if (this.state.lastCheckInDate === today) {
+      this.dom.btnCheckIn.textContent = '已簽到 ✓';
+      this.dom.btnCheckIn.style.opacity = '0.6';
+      this.dom.btnCheckIn.style.pointerEvents = 'none';
+      this.dom.checkInStatusText.innerHTML = `今天已完成簽到！(目前累計簽到 <span class="text-primary" style="font-weight:bold;">${this.state.checkInCount}</span> 天)`;
+    } else {
+      this.dom.btnCheckIn.textContent = '點我簽到 ✍️';
+      this.dom.btnCheckIn.style.opacity = '1';
+      this.dom.btnCheckIn.style.pointerEvents = 'auto';
+      this.dom.checkInStatusText.innerHTML = `今天尚未簽到 (目前累計簽到 <span class="text-primary" style="font-weight:bold;">${this.state.checkInCount}</span> 天)`;
+    }
+  },
+
+  // ⬇️ 新增：動態渲染設定頁面中「有解鎖的主題」
+  renderThemeSelectUI() {
+    if (!this.dom.themeSelect) return;
+    this.dom.themeSelect.innerHTML = '';
+    
+    const themeOptions = [
+      { value: 'default', label: '預設標準藍 (原始外觀)' },
+      { value: 'theme-monochrome', label: '🔒 14天簽到：簡約黑白' },
+      { value: 'theme-neon-sakura', label: '🔒 100天簽到：夜櫻霓虹' },
+      { value: 'theme-makie-gold', label: '🔒 200天簽到：蒔繪金箔' },
+      { value: 'theme-aurora-stage', label: '🔒 300天簽到：幻光星海' },
+      { value: 'theme-shiba-gold', label: '🐾 特殊彩蛋：蒔繪金箔-柴犬版 🐶' },
+    ];
+    
+    themeOptions.forEach(opt => {
+      // 只有預設主題，或者已經存在解鎖清單中的主題，才會顯示在選單裡
+      if (opt.value === 'default' || this.state.unlockedThemes.includes(opt.value)) {
+        const o = document.createElement('option');
+        o.value = opt.value;
+        // 把解鎖後的「🔒」圖案拿掉
+        o.textContent = opt.label.replace('🔒 ', '✨ 已解鎖：');
+        if (this.state.currentTheme === opt.value) o.selected = true;
+        this.dom.themeSelect.appendChild(o);
+      }
+    });
   },
 
   renderHoursPage() {
@@ -397,19 +530,16 @@ const APP = {
   },
 
   renderExpenses() {
-    // 1. 更新月份標題
     if (this.dom.monthDisplay && this.state.currentExpenseMonth) {
       const [year, month] = this.state.currentExpenseMonth.split('-');
       this.dom.monthDisplay.textContent = `${year}年${parseInt(month)}月`;
     }
 
-    // 2. 過濾出該月份的資料 (相容舊資料)
     const monthlyData = this.state.expenses.filter(e => {
       const eMonth = e.isoMonth || this.state.currentExpenseMonth;
       return eMonth === this.state.currentExpenseMonth;
     });
 
-    // 3. 計算本月總額
     const totalJpy = monthlyData.reduce((sum, e) => sum + e.amount, 0);
     const totalNtd = Math.round(totalJpy * this.state.exchangeRate);
     
@@ -417,7 +547,6 @@ const APP = {
     if (document.getElementById('expense-ntd')) document.getElementById('expense-ntd').textContent = `NT$${totalNtd}`;
     if (document.getElementById('progress-expense-text')) document.getElementById('progress-expense-text').textContent = `￥${totalJpy} / NT$${totalNtd}`;
 
-    // 4. 渲染快捷鍵
     if (this.dom.expQuickBox) {
       this.dom.expQuickBox.innerHTML = '';
       this.state.quickExpenses.forEach(q => {
@@ -427,37 +556,6 @@ const APP = {
         btn.addEventListener('click', () => this.addExpenseRecord(q.label, q.amount));
         this.dom.expQuickBox.appendChild(btn);
       });
-    }
-
-    // 5. 渲染本月明細列表
-    if (this.dom.monthlyExpenseList) {
-      this.dom.monthlyExpenseList.innerHTML = '';
-      
-      if (monthlyData.length === 0) {
-         this.dom.monthlyExpenseList.innerHTML = '<div style="text-align:center; padding: 24px; color: var(--text-muted);">本月尚無記帳紀錄</div>';
-      } else {
-         // 反轉陣列讓最新的一筆在最上面
-         [...monthlyData].reverse().forEach(e => {
-            const realIndex = this.state.expenses.findIndex(x => x.id === e.id);
-            
-            const div = document.createElement('div');
-            div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border);";
-            div.innerHTML = `
-              <div>
-                <div style="font-weight: 600; font-size: 1rem; color: var(--text);">${escapeHtml(e.desc)}</div>
-                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">${e.date}</div>
-              </div>
-              <div style="display: flex; align-items: center; gap: 16px;">
-                <strong style="font-size: 1.2rem; color: var(--text);">￥${e.amount}</strong>
-                <button class="btn-icon" style="color: var(--danger); font-size: 1.1rem; padding: 4px;" onclick="APP.deleteItem('expenses', ${realIndex})">🗑️</button>
-              </div>
-            `;
-            this.dom.monthlyExpenseList.appendChild(div);
-         });
-         
-         // 移除最後一項的底線
-         this.dom.monthlyExpenseList.lastChild.style.borderBottom = 'none';
-      }
     }
   },
 
@@ -538,7 +636,6 @@ const APP = {
     this.dom.modal.classList.add('active'); 
     this.dom.modalBody.innerHTML = '';
 
-    // 💎 核心引擎：依照月份進行分組，並建立 HTML 手風琴摺疊面板
     const renderGrouped = (items, dateExtractor, renderItemFn) => {
       const grouped = {};
       items.forEach(item => {
@@ -555,23 +652,18 @@ const APP = {
 
       sortedMonths.forEach((month, index) => {
         const details = document.createElement('details');
-        if (index === 0) details.open = true; // 預設只展開最新的一個月
+        if (index === 0) details.open = true;
         details.style.marginBottom = '12px';
 
         const summary = document.createElement('summary');
         const [y, m] = month.split('-');
-        // 自訂漂亮的手風琴標題
         summary.style.cssText = 'font-size: 1.05rem; font-weight: 600; padding: 12px 16px; background: var(--primary-light); color: var(--primary); border-radius: 8px; cursor: pointer; outline: none; margin-bottom: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;';
         summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ 點擊展開/收起</span>`;
         details.appendChild(summary);
 
         const content = document.createElement('div');
-        content.style.display = 'flex';
-        content.style.flexDirection = 'column';
-        content.style.gap = '10px';
-        content.style.padding = '0 4px 8px 4px';
+        content.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 0 4px 8px 4px;';
 
-        // 反轉陣列，讓該月最新的一筆在最上面
         [...grouped[month]].reverse().forEach(item => {
           content.appendChild(renderItemFn(item));
         });
@@ -581,7 +673,6 @@ const APP = {
       });
     };
 
-    // 取得 Timestamp 對應的 YYYY-MM，方便把舊資料分組
     const getMonthFromId = (id) => {
       const d = new Date(Number(id));
       if (isNaN(d.getTime())) return '未分類';
