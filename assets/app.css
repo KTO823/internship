@@ -619,37 +619,39 @@ body.theme-neon-sakura {
   background-image: none;
 }
 
-/* 3. 200天獎勵：蒔繪金箔 (沉穩高級黑 + 明顯的菱格紋金線) */
+/* 3. 200天獎勵：蒔繪金箔 (加強菱格紋金線亮度與頂部光暈) */
 body.theme-makie-gold {
-  --primary: #c5a059; /* 柔和的高級沙金 */
+  --primary: #c5a059; 
   --primary-light: rgba(197, 160, 89, 0.1);
   --bg: #121212; 
-  --surface: #1e1e1e; /* 卡片與側邊欄變成曜石黑 */
+  --surface: #1e1e1e; 
   --text: #f0eedf; --text-muted: #a39c87; --border: rgba(197, 160, 89, 0.3);
   --danger-bg: rgba(197, 160, 89, 0.08); --danger-text: #e6ce98; --danger-border: rgba(197, 160, 89, 0.4);
-  background-color: #121212;
-  /* 增加高級感的菱格紋交織金線 */
+  background-color: #121212 !important;
+  /* 增加頂部打光，並把金線透明度提高到 12% 讓肉眼可見 */
   background-image: 
-    linear-gradient(45deg, rgba(212, 175, 55, 0.04) 1px, transparent 1px),
-    linear-gradient(-45deg, rgba(212, 175, 55, 0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
+    radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.15), transparent 60%),
+    linear-gradient(45deg, rgba(212, 175, 55, 0.12) 1px, transparent 1px),
+    linear-gradient(-45deg, rgba(212, 175, 55, 0.12) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 30px 30px, 30px 30px !important;
+  background-attachment: fixed !important;
 }
 
-/* 4. 300天獎勵：幻光星海 (降低刺眼藍光，加上 SVG 點點星空與柔和極光) */
+/* 4. 300天獎勵：幻光星海 (修復 SVG 破圖問題，加強極光亮度) */
 body.theme-aurora-stage {
-  --primary: #4dd0e1; /* 柔和的極光青藍色 */
+  --primary: #4dd0e1; 
   --primary-light: rgba(77, 208, 225, 0.15);
   --bg: #0a0e17; 
-  --surface: #131926; /* 卡片與側邊欄變成深海軍藍 */
+  --surface: #131926; 
   --text: #e0f2f1; --text-muted: #78929c; --border: rgba(77, 208, 225, 0.25);
   --danger-bg: rgba(77, 208, 225, 0.1); --danger-text: #8ee3ef; --danger-border: rgba(77, 208, 225, 0.3);
-  background-color: #0a0e17;
-  background-attachment: fixed;
-  /* 柔和的極光漸層 + 隨機散落的文字符號星星 */
+  background-color: #0a0e17 !important;
+  background-attachment: fixed !important;
+  /* 修正 SVG 編碼，並調亮極光漸層 */
   background-image: 
-    radial-gradient(circle at 15% 20%, rgba(77, 208, 225, 0.06), transparent 40%),
-    radial-gradient(circle at 85% 80%, rgba(126, 87, 194, 0.06), transparent 40%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><text x='40' y='60' fill='rgba(255,255,255,0.1)' font-size='14'>✦</text><text x='250' y='120' fill='rgba(255,255,255,0.15)' font-size='10'>⋆</text><text x='120' y='280' fill='rgba(255,255,255,0.08)' font-size='18'>✧</text><text x='320' y='320' fill='rgba(255,255,255,0.12)' font-size='12'>*</text><text x='180' y='180' fill='rgba(255,255,255,0.05)' font-size='8'>.</text></svg>");
+    radial-gradient(circle at 15% 20%, rgba(77, 208, 225, 0.18), transparent 50%),
+    radial-gradient(circle at 85% 80%, rgba(126, 87, 194, 0.18), transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Ctext x='40' y='60' fill='rgba(255,255,255,0.4)' font-size='16'%3E✦%3C/text%3E%3Ctext x='250' y='120' fill='rgba(255,255,255,0.5)' font-size='12'%3E⋆%3C/text%3E%3Ctext x='120' y='280' fill='rgba(255,255,255,0.3)' font-size='20'%3E✧%3C/text%3E%3Ctext x='320' y='320' fill='rgba(255,255,255,0.4)' font-size='14'%3E*%3C/text%3E%3Ctext x='180' y='180' fill='rgba(255,255,255,0.2)' font-size='10'%3E.%3C/text%3E%3Ctext x='350' y='50' fill='rgba(255,255,255,0.3)' font-size='12'%3E⋆%3C/text%3E%3Ctext x='50' y='350' fill='rgba(255,255,255,0.2)' font-size='16'%3E✦%3C/text%3E%3C/svg%3E") !important;
 }
 
 /* 5. 🐾 獨立彩蛋：暖心柴柴版 */
@@ -660,6 +662,31 @@ body.theme-shiba-gold {
   --danger-bg: #fbeee6; --danger-text: #c06c20; --danger-border: #f5d3b3;
   background-image: none;
 }
+
+/* ==========================================================================
+   修復：輸入框、下拉選單、日期的白底與字體顏色對比
+   ========================================================================== */
+
+/* 1. 強制所有輸入框跟隨主題背景，不要再死守白色 */
+input, select, textarea, .styled-select {
+  background-color: var(--bg) !important; 
+  color: var(--text) !important; 
+  border: 1px solid var(--border) !important;
+}
+
+/* 2. 確保「年/月/日」這類提示文字 (placeholder) 也能清楚顯示 */
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 1 !important;
+}
+
+/* 3. 神奇魔法：讓深色主題下的「小日曆圖示」反白，才不會黑底配黑圖示隱形 */
+body.theme-neon-sakura ::-webkit-calendar-picker-indicator,
+body.theme-makie-gold ::-webkit-calendar-picker-indicator,
+body.theme-aurora-stage ::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) brightness(1.2);
+}
+
 /* ==========================================================================
    動態主題圖示控制 (隨主題自動變換圖示形狀)
    ========================================================================== */
