@@ -233,6 +233,7 @@ const APP = {
     };
     
     bindModal('btn-manage-punch', 'punch');
+    bindModal('btn-manage-expense', 'expense'); // 👉 就是漏了這行！補上去！
     bindModal('btn-edit-quick-expense', 'quickExpense');
     bindModal('btn-manage-note', 'note');
     bindModal('btn-manage-journal', 'journal');
@@ -404,7 +405,7 @@ const APP = {
 
     // 2. 過濾出該月份的資料 (相容舊資料)
     const monthlyData = this.state.expenses.filter(e => {
-      const eMonth = e.isoMonth || this.state.currentExpenseMonth; // 若舊資料無 isoMonth，當作本月
+      const eMonth = e.isoMonth || this.state.currentExpenseMonth;
       return eMonth === this.state.currentExpenseMonth;
     });
 
@@ -537,29 +538,125 @@ const APP = {
     this.dom.modal.classList.add('active'); 
     this.dom.modalBody.innerHTML = '';
 
-    if (type === 'punch') {
-      this.dom.modalTitle.textContent = '打卡歷史紀錄';
-      Object.keys(this.state.punchRecords).sort().reverse().forEach(date => {
-        const day = this.state.punchRecords[date]; const div = document.createElement('div'); div.className = 'history-card'; 
-        let html = `<p><strong>${date}</strong></p>`;
-        if (day.manualTotal > 0) html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
-        else day.records.forEach((r, i) => { html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`; });
-        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`; div.innerHTML = html; this.dom.modalBody.appendChild(div);
+    // 💎 核心引擎：依照月份進行分組，並建立 HTML 手風琴摺疊面板
+    const renderGrouped = (items, dateExtractor, renderItemFn) => {
+      const grouped = {};
+      items.forEach(item => {
+        const month = dateExtractor(item);
+        if (!grouped[month]) grouped[month] = [];
+        grouped[month].push(item);
       });
+
+      const sortedMonths = Object.keys(grouped).sort().reverse();
+      if (sortedMonths.length === 0) {
+        this.dom.modalBody.innerHTML = '<p style="text-align:center; color:gray; padding: 20px;">尚無紀錄</p>';
+        return;
+      }
+
+      sortedMonths.forEach((month, index) => {
+        const details = document.createElement('details');
+        if (index === 0) details.open = true; // 預設只展開最新的一個月
+        details.style.marginBottom = '12px';
+
+        const summary = document.createElement('summary');
+        const [y, m] = month.split('-');
+        // 自訂漂亮的手風琴標題
+        summary.style.cssText = 'font-size: 1.05rem; font-weight: 600; padding: 12px 16px; background: var(--primary-light); color: var(--primary); border-radius: 8px; cursor: pointer; outline: none; margin-bottom: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;';
+        summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ 點擊展開/收起</span>`;
+        details.appendChild(summary);
+
+        const content = document.createElement('div');
+        content.style.display = 'flex';
+        content.style.flexDirection = 'column';
+        content.style.gap = '10px';
+        content.style.padding = '0 4px 8px 4px';
+
+        // 反轉陣列，讓該月最新的一筆在最上面
+        [...grouped[month]].reverse().forEach(item => {
+          content.appendChild(renderItemFn(item));
+        });
+
+        details.appendChild(content);
+        this.dom.modalBody.appendChild(details);
+      });
+    };
+
+    // 取得 Timestamp 對應的 YYYY-MM，方便把舊資料分組
+    const getMonthFromId = (id) => {
+      const d = new Date(Number(id));
+      if (isNaN(d.getTime())) return '未分類';
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    if (type === 'punch') {
+      this.dom.modalTitle.textContent = '打卡歷史紀錄 (依月份分類)';
+      const punchArray = Object.keys(this.state.punchRecords).map(date => ({
+        date, data: this.state.punchRecords[date]
+      }));
+      
+      renderGrouped(punchArray, item => item.date.substring(0, 7), (item) => {
+        const { date, data: day } = item;
+        const div = document.createElement('div'); 
+        div.className = 'history-card'; 
+        let html = `<p><strong>${date}</strong></p>`;
+        if (day.manualTotal > 0) {
+          html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
+        } else {
+          day.records.forEach((r, i) => { 
+            html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`; 
+          });
+        }
+        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`; 
+        div.innerHTML = html; 
+        return div;
+      });
+
+    } else if (type === 'expense') {
+      this.dom.modalTitle.textContent = '記帳明細歷史 (依月份分類)';
+      const exps = this.state.expenses.map((e, idx) => ({ ...e, _idx: idx }));
+      
+      renderGrouped(exps, item => item.isoMonth || getMonthFromId(item.id), (e) => {
+        const div = document.createElement('div'); 
+        div.className = 'history-card'; 
+        div.innerHTML = `
+          <p style="color:gray; font-size:0.8rem;">${e.date}</p>
+          <p><strong>${escapeHtml(e.desc)}</strong>：￥${e.amount}</p>
+          <div class="history-actions">
+            <button class="btn btn-sm danger" onclick="APP.deleteItem('expenses', ${e._idx}, 'expense')">刪除</button>
+          </div>
+        `; 
+        return div;
+      });
+
     } else if (type === 'quickExpense') {
       this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
       this.state.quickExpenses.forEach((q, idx) => { 
         const div = document.createElement('div'); div.className = 'history-card'; 
-        div.innerHTML = `<p>${q.label} (￥${q.amount})</p><div class="history-actions"><button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button></div>`; this.dom.modalBody.appendChild(div); 
+        div.innerHTML = `<p>${q.label} (￥${q.amount})</p><div class="history-actions"><button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button></div>`; 
+        this.dom.modalBody.appendChild(div); 
       });
       const addBtn = document.createElement('button'); addBtn.className = 'btn secondary'; addBtn.textContent = '+ 新增快捷鍵'; 
-      addBtn.onclick = () => { const label = prompt('按鈕名稱 (例: 咖啡)'); if (!label) return; const amount = Number(prompt('金額')); if (amount) { this.state.quickExpenses.push({ id: Date.now(), label, amount }); this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); } }; this.dom.modalBody.appendChild(addBtn);
+      addBtn.onclick = () => { const label = prompt('按鈕名稱 (例: 咖啡)'); if (!label) return; const amount = Number(prompt('金額')); if (amount) { this.state.quickExpenses.push({ id: Date.now(), label, amount }); this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); } }; 
+      this.dom.modalBody.appendChild(addBtn);
+
     } else if (type === 'note' || type === 'journal') {
-      this.dom.modalTitle.textContent = type === 'note' ? '歷史備註' : '歷史週誌'; 
-      const targetArr = this.state[type + 's'];
-      [...targetArr].reverse().forEach((item, revIdx) => { 
-        const idx = targetArr.length - 1 - revIdx; const div = document.createElement('div'); div.className = 'history-card'; const title = type === 'journal' ? `第 ${item.week} 週` : ''; 
-        div.innerHTML = `<p><strong>${title}</strong> <span style="font-size:0.8rem; color:gray;">${item.date}</span></p><p style="white-space:pre-wrap;">${escapeHtml(item.text)}</p><div class="history-actions">${type === 'journal' ? `<button class="btn btn-sm secondary" onclick="APP.exportJournal(${idx})">匯出 PDF</button>` : ''} <button class="btn btn-sm secondary" onclick="APP.editTextItem('${type}s', ${idx}, '${type}')">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('${type}s', ${idx}, '${type}')">刪除</button></div>`; this.dom.modalBody.appendChild(div); 
+      this.dom.modalTitle.textContent = type === 'note' ? '歷史備註 (依月份分類)' : '歷史週誌 (依月份分類)'; 
+      const targetArr = this.state[type + 's'].map((item, idx) => ({ ...item, _idx: idx }));
+      
+      renderGrouped(targetArr, item => getMonthFromId(item.id), (item) => {
+        const div = document.createElement('div'); 
+        div.className = 'history-card'; 
+        const title = type === 'journal' ? `第 ${item.week} 週` : ''; 
+        div.innerHTML = `
+          <p><strong>${title}</strong> <span style="font-size:0.8rem; color:gray;">${item.date}</span></p>
+          <p style="white-space:pre-wrap;">${escapeHtml(item.text)}</p>
+          <div class="history-actions">
+            ${type === 'journal' ? `<button class="btn btn-sm secondary" onclick="APP.exportJournal(${item._idx})">匯出 PDF</button>` : ''} 
+            <button class="btn btn-sm secondary" onclick="APP.editTextItem('${type}s', ${item._idx}, '${type}')">編輯</button> 
+            <button class="btn btn-sm danger" onclick="APP.deleteItem('${type}s', ${item._idx}, '${type}')">刪除</button>
+          </div>
+        `; 
+        return div;
       });
     }
   },
