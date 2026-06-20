@@ -639,7 +639,7 @@ body.theme-makie-gold {
 
 /* 4. 300天獎勵：幻光星海 (修復 SVG 破圖問題，加強極光亮度) */
 body.theme-aurora-stage {
-  --primary: #416dc0; 
+  --primary: #8ee3ef; 
   --primary-light: rgba(77, 208, 225, 0.15);
   --bg: #0a0e17; 
   --surface: #131926; 
