@@ -576,104 +576,71 @@ textarea {
     display: block;
   }
 }
-/* 讓網頁元件去讀取解鎖的主題顏色 */
-body {
-  background-color: var(--bg) !important;
-  color: var(--text) !important;
+
+/* 覆蓋原本的緊急提醒顏色，讓它聽從主題的指揮，解決看不到字的問題 */
+.reminder-item.urgent, .checklist-item.urgent {
+  background-color: var(--danger-bg) !important;
+  color: var(--danger-text) !important;
+  border: 1px solid var(--border) !important;
+}
+.reminder-item.urgent h4, .reminder-item.urgent p, .checklist-item.urgent span {
+  color: var(--danger-text) !important;
 }
 
-.card {
-  background-color: var(--card-bg) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
-}
-
-/* 讓側邊欄和手機導覽列也跟著主題一起變色 */
-.desktop-sidebar, 
-.mobile-nav {
-  background-color: var(--card-bg) !important;
-  border-color: var(--border) !important;
-}
-
-/* 讓輸入框、下拉選單與主題底色同步 */
-.input-group input,
-.styled-select,
-.setting-row input,
-#quick-note,
-#weekly-journal {
-  background-color: var(--card-bg) !important;
-  color: var(--text) !important;
-  border-color: var(--border) !important;
-}
-
-/* 確保所有標題與文字顏色都聽主題的話 */
-h1, h2, h3, h4, p, label, span, strong, .nav-item {
-  color: var(--text) !important;
-}
 /* 預設標準藍 (原始外觀) */
 body, body.theme-default {
-  --primary: #4a90e2;
-  --primary-light: #eef5fc;
-  --bg: #f4f6f9;
-  --card-bg: #ffffff;
-  --text: #333333;
-  --text-muted: #888888;
-  --border: #e0e0e0;
+  --primary: #4a90e2; --primary-light: #eef5fc; --bg: #f4f6f9; --card-bg: #ffffff;
+  --text: #333333; --text-muted: #888888; --border: #e0e0e0;
+  --danger-bg: #ffe5e5; --danger-text: #d32f2f;
+  background-image: none;
 }
 
-/* 14天獎勵：簡約黑白 */
+/* 14天獎勵：簡約黑白 (加深底色對比，更加俐落) */
 body.theme-monochrome {
-  --primary: #222222;
-  --primary-light: #f0f0f0;
-  --bg: #f9f9f9;
-  --card-bg: #ffffff;
-  --text: #111111;
-  --text-muted: #666666;
-  --border: #dddddd;
+  --primary: #222222; --primary-light: #f0f0f0; --bg: #e0e0e0; --card-bg: #ffffff;
+  --text: #111111; --text-muted: #666666; --border: #cccccc;
+  --danger-bg: #eeeeee; --danger-text: #333333;
+  background-image: none;
 }
 
-/* 100天獎勵：夜櫻霓虹 */
+/* 100天獎勵：夜櫻霓虹 (修正為深紫黑底，文字改為高對比櫻粉白) */
 body.theme-neon-sakura {
-  --primary: #ff69b4;
-  --primary-light: #2d1f2d;
-  --bg: #0b090a;
-  --card-bg: #161214;
-  --text: #f5f3f4;
-  --text-muted: #a4a2a3;
-  --border: rgba(255, 105, 180, 0.25);
+  --primary: #ff7eb3; --primary-light: rgba(255, 126, 179, 0.15);
+  --bg: #140912; --card-bg: #22111a;
+  --text: #fdf0f5; --text-muted: #b58b9d; --border: rgba(255, 126, 179, 0.3);
+  --danger-bg: rgba(255, 105, 180, 0.15); --danger-text: #ff99cc;
+  background-image: none;
 }
 
-/* 200天獎勵：蒔繪金箔 */
+/* 200天獎勵：蒔繪金箔 (加入隱約的斜線紋理與沉穩高級黑) */
 body.theme-makie-gold {
-  --primary: #d4af37;
-  --primary-light: #2a2415;
-  --bg: #111111;
-  --card-bg: #1c1c1c;
-  --text: #ffffff;
-  --text-muted: #aaaaaa;
-  --border: rgba(212, 175, 55, 0.25);
+  --primary: #d4af37; --primary-light: rgba(212, 175, 55, 0.1);
+  --bg: #0d0d0d; --card-bg: #1a1813;
+  --text: #f9f6ef; --text-muted: #a39770; --border: rgba(212, 175, 55, 0.25);
+  --danger-bg: rgba(212, 175, 55, 0.1); --danger-text: #e6c875;
+  background-image: repeating-linear-gradient(45deg, rgba(212, 175, 55, 0.03) 0, rgba(212, 175, 55, 0.03) 1px, transparent 1px, transparent 12px);
 }
 
-/* 300天獎勵：幻光星海 */
+/* 300天獎勵：幻光星海 (文字符號星星＋極光漸層背景) */
 body.theme-aurora-stage {
-  --primary: #00f2fe;
-  --primary-light: #151b2d;
-  --bg: #050508;
-  --card-bg: #0f0c1b;
-  --text: #ffffff;
-  --text-muted: #8ee3ef;
-  --border: rgba(79, 172, 254, 0.25);
+  --primary: #00f2fe; --primary-light: rgba(0, 242, 254, 0.15);
+  --bg: #070913; --card-bg: rgba(15, 20, 35, 0.85);
+  --text: #e0f7fa; --text-muted: #79aeb5; --border: rgba(0, 242, 254, 0.3);
+  --danger-bg: rgba(0, 242, 254, 0.15); --danger-text: #8ee3ef;
+  background-color: #070913;
+  background-image:
+    radial-gradient(circle at 15% 30%, rgba(79, 172, 254, 0.12), transparent 45%),
+    radial-gradient(circle at 85% 70%, rgba(155, 89, 182, 0.12), transparent 45%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><text x='30' y='50' fill='rgba(255,255,255,0.15)' font-size='18'>✦</text><text x='200' y='90' fill='rgba(255,255,255,0.25)' font-size='12'>⋆</text><text x='100' y='200' fill='rgba(255,255,255,0.2)' font-size='24'>✧</text><text x='250' y='240' fill='rgba(255,255,255,0.3)' font-size='14'>*</text><text x='150' y='130' fill='rgba(255,255,255,0.1)' font-size='10'>.</text></svg>");
+  background-attachment: fixed;
 }
 
-/* 🐾 獨立彩蛋解鎖：暖心柴柴版 (簡單溫馨風格) */
+/* 🐾 獨立彩蛋：暖心柴柴版 */
 body.theme-shiba-gold {
-  --primary: #d68942;       /* 柴犬專屬亮橘棕色 */
-  --primary-light: #fdf5ec; /* 柔軟的奶油白 (按鈕底色) */
-  --bg: #faf7f2;            /* 淡淡的溫暖米色背景 */
-  --card-bg: #ffffff;       /* 乾淨純粹的白色卡片 */
-  --text: #5c432b;          /* 巧克力深棕色文字，比純黑更溫柔 */
-  --text-muted: #9e846f;    /* 淺拿鐵色 */
-  --border: #f0e4d8;        /* 淺淺的餅乾色邊框 */
+  --primary: #d68942; --primary-light: #fdf5ec; --bg: #faf7f2; --card-bg: #ffffff;
+  --text: #5c432b; --text-muted: #9e846f; --border: #f0e4d8;
+  --danger-bg: #fbeee6; --danger-text: #c06c20;
+  background-image: none;
 }
 /* ==========================================================================
    動態主題圖示控制 (隨主題自動變換圖示形狀)
