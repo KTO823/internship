@@ -682,17 +682,108 @@ const APP = {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     };
 
-    // ⬇️ 新增：把簽到歷史資料餵給摺疊面板
+    // ⬇️ 新增：把簽到歷史資料改成互動式月曆彈窗
     if (type === 'checkInHistory') {
-      this.dom.modalTitle.textContent = '歷史簽到紀錄 (依月份分類)';
-      const historyArr = (this.state.checkInHistory || []).map(date => ({ date }));
+      this.dom.modalTitle.textContent = '📅 歷史簽到月曆';
       
-      renderGrouped(historyArr, item => item.date.substring(0, 7), (item) => {
-        const div = document.createElement('div');
-        div.className = 'history-card';
-        div.innerHTML = `<p style="margin: 0;"><strong>✅ ${item.date}</strong> <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 8px;">已完成簽到</span></p>`;
-        return div;
-      });
+      // 預設顯示當前月份
+      let currentViewDate = new Date(); 
+      
+      const renderCalendar = () => {
+        this.dom.modalBody.innerHTML = '';
+        
+        const year = currentViewDate.getFullYear();
+        const month = currentViewDate.getMonth(); // 0-11
+        
+        // 1. 標題與切換月份按鈕
+        const headerDiv = document.createElement('div');
+        headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 8px;';
+        
+        const btnPrev = document.createElement('button');
+        btnPrev.className = 'btn-icon';
+        btnPrev.textContent = '◀';
+        btnPrev.style.fontSize = '1.2rem';
+        btnPrev.onclick = () => { currentViewDate.setMonth(month - 1); renderCalendar(); };
+        
+        const titleSpan = document.createElement('span');
+        titleSpan.style.cssText = 'font-weight: bold; font-size: 1.1rem; color: var(--text);';
+        titleSpan.textContent = `${year}年 ${month + 1}月`;
+        
+        const btnNext = document.createElement('button');
+        btnNext.className = 'btn-icon';
+        btnNext.textContent = '▶';
+        btnNext.style.fontSize = '1.2rem';
+        btnNext.onclick = () => { currentViewDate.setMonth(month + 1); renderCalendar(); };
+        
+        headerDiv.appendChild(btnPrev);
+        headerDiv.appendChild(titleSpan);
+        headerDiv.appendChild(btnNext);
+        this.dom.modalBody.appendChild(headerDiv);
+        
+        // 2. 月曆網格容器
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;';
+        
+        // 3. 星期標題
+        const days = ['日', '一', '二', '三', '四', '五', '六'];
+        days.forEach(d => {
+          const el = document.createElement('div');
+          el.style.cssText = 'font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-bottom: 8px;';
+          el.textContent = d;
+          grid.appendChild(el);
+        });
+        
+        // 4. 計算該月天數與起始日
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        // 填充月初空白格子
+        for (let i = 0; i < firstDay; i++) {
+          const empty = document.createElement('div');
+          grid.appendChild(empty);
+        }
+        
+        // 5. 填充日期格子與簽到狀態
+        const historySet = new Set(this.state.checkInHistory || []);
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+          const dateDiv = document.createElement('div');
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+          const hasCheckedIn = historySet.has(dateStr);
+          const isToday = dateStr === this.getTodayStr();
+          
+          dateDiv.style.cssText = `
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid ${isToday ? 'var(--primary)' : 'var(--border)'};
+            background: ${hasCheckedIn ? 'var(--primary-light)' : 'var(--card-bg)'};
+            color: ${hasCheckedIn ? 'var(--primary)' : 'var(--text)'};
+            font-weight: ${hasCheckedIn || isToday ? '600' : 'normal'};
+            font-size: 0.95rem;
+          `;
+          
+          // 有簽到的日子，下方會出現動態主題的圖示 (櫻花、肉墊、勾勾等)
+          dateDiv.innerHTML = `
+            <span>${i}</span>
+            <span style="font-size: 0.7rem; height: 12px; margin-top: 2px;">
+              ${hasCheckedIn ? '<span class="dynamic-icon icon-checkin"></span>' : ''}
+            </span>
+          `;
+          
+          grid.appendChild(dateDiv);
+        }
+        
+        this.dom.modalBody.appendChild(grid);
+      };
+      
+      // 首次呼叫渲染
+      renderCalendar();
+
+    } else if (type === 'punch') {
 
     } else if (type === 'punch') {
       this.dom.modalTitle.textContent = '打卡歷史紀錄 (依月份分類)';
