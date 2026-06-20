@@ -691,6 +691,28 @@ body.theme-aurora-stage ::-webkit-calendar-picker-indicator {
   filter: invert(0.8) brightness(1.2);
 }
 
+/* --- 修復彈窗內所有按鈕 (箭頭、關閉) 在暗色主題下的可見度 --- */
+.modal-body .btn-icon, 
+.modal-header .btn-icon {
+  color: var(--text) !important; /* 強制文字變亮 */
+  background: rgba(255, 255, 255, 0.1) !important; /* 加一個淡淡的底色，讓它浮出來 */
+  padding: 8px !important;
+  border-radius: 50% !important;
+  transition: 0.2s;
+}
+
+/* 滑鼠移上去時給點亮光 */
+.modal-body .btn-icon:hover, 
+.modal-header .btn-icon:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* 特別針對箭頭，確保它們在各主題下都是白色的 */
+.modal-body .btn-icon {
+  color: var(--primary) !important; /* 箭頭使用主色，夠亮且有質感 */
+  background: var(--primary-light) !important;
+}
+
 /* ==========================================================================
    動態主題圖示控制 (隨主題自動變換圖示形狀)
    ========================================================================== */
