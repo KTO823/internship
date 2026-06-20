@@ -576,3 +576,102 @@ textarea {
     display: block;
   }
 }
+/* 讓網頁元件去讀取解鎖的主題顏色 */
+body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+.card {
+  background-color: var(--card-bg) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* 讓側邊欄和手機導覽列也跟著主題一起變色 */
+.desktop-sidebar, 
+.mobile-nav {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border) !important;
+}
+
+/* 讓輸入框、下拉選單與主題底色同步 */
+.input-group input,
+.styled-select,
+.setting-row input,
+#quick-note,
+#weekly-journal {
+  background-color: var(--card-bg) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* 確保所有標題與文字顏色都聽主題的話 */
+h1, h2, h3, h4, p, label, span, strong, .nav-item {
+  color: var(--text) !important;
+}
+/* 預設標準藍 (原始外觀) */
+body, body.theme-default {
+  --primary: #4a90e2;
+  --primary-light: #eef5fc;
+  --bg: #f4f6f9;
+  --card-bg: #ffffff;
+  --text: #333333;
+  --text-muted: #888888;
+  --border: #e0e0e0;
+}
+
+/* 14天獎勵：簡約黑白 */
+body.theme-monochrome {
+  --primary: #222222;
+  --primary-light: #f0f0f0;
+  --bg: #f9f9f9;
+  --card-bg: #ffffff;
+  --text: #111111;
+  --text-muted: #666666;
+  --border: #dddddd;
+}
+
+/* 100天獎勵：夜櫻霓虹 */
+body.theme-neon-sakura {
+  --primary: #ff69b4;
+  --primary-light: #2d1f2d;
+  --bg: #0b090a;
+  --card-bg: #161214;
+  --text: #f5f3f4;
+  --text-muted: #a4a2a3;
+  --border: rgba(255, 105, 180, 0.25);
+}
+
+/* 200天獎勵：蒔繪金箔 */
+body.theme-makie-gold {
+  --primary: #d4af37;
+  --primary-light: #2a2415;
+  --bg: #111111;
+  --card-bg: #1c1c1c;
+  --text: #ffffff;
+  --text-muted: #aaaaaa;
+  --border: rgba(212, 175, 55, 0.25);
+}
+
+/* 300天獎勵：幻光星海 */
+body.theme-aurora-stage {
+  --primary: #00f2fe;
+  --primary-light: #151b2d;
+  --bg: #050508;
+  --card-bg: #0f0c1b;
+  --text: #ffffff;
+  --text-muted: #8ee3ef;
+  --border: rgba(79, 172, 254, 0.25);
+}
+
+/* 🐾 獨立彩蛋解鎖：暖心柴柴版 (簡單溫馨風格) */
+body.theme-shiba-gold {
+  --primary: #d68942;       /* 柴犬專屬亮橘棕色 */
+  --primary-light: #fdf5ec; /* 柔軟的奶油白 (按鈕底色) */
+  --bg: #faf7f2;            /* 淡淡的溫暖米色背景 */
+  --card-bg: #ffffff;       /* 乾淨純粹的白色卡片 */
+  --text: #5c432b;          /* 巧克力深棕色文字，比純黑更溫柔 */
+  --text-muted: #9e846f;    /* 淺拿鐵色 */
+  --border: #f0e4d8;        /* 淺淺的餅乾色邊框 */
+}
