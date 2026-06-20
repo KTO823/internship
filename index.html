@@ -79,14 +79,6 @@
           <button class="mobile-settings-btn nav-item" data-page="settings"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         <div class="page-content">
-
-          <div class="card" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; padding: 16px;">
-            <div>
-              <h3 style="margin: 0; font-size: 1.1rem; color: var(--text);">每日簽到</h3>
-              <p id="checkin-status-text" style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">載入中...</p>
-            </div>
-            <button class="btn" id="btn-checkin" style="width: auto; padding: 8px 16px; margin: 0;">點我簽到 <span class="dynamic-icon icon-checkin"></span></button>
-          </div>
           
           <div class="card" style="margin-bottom: 20px;">
             <div class="progress-label-row">
@@ -131,8 +123,21 @@
             <h2>近期提醒</h2>
             <div id="dash-reminders" class="reminder-list card"></div>
           </section>
+
+          <!-- 新增：歷史簽到紀錄 (置底) -->
+           <section class="section" style="margin-top: 30px; margin-bottom: 40px;">
+             <h2>歷史簽到紀錄</h2>
+             <div class="card" style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+               <div>
+                 <p style="margin: 0; font-size: 1rem;">目前已累計：<strong id="history-checkin-count" class="text-primary" style="font-size: 1.2rem;">0</strong> 天</p>
+                 <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">最後簽到：<span id="history-last-checkin">無</span></p>
+               </div>
+               <button class="btn secondary" id="btn-view-checkin-history" style="margin: 0; padding: 8px 16px;">查看明細</button>
+             </div>
+           </section>
         </div>
       </div>
+
 
       <div class="page" id="page-hours" data-page="hours">
         <div class="page-header">

@@ -3,7 +3,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// 你剛剛拿到的專屬鑰匙
 const firebaseConfig = {
   apiKey: "AIzaSyA_O2QrUhJo7YqG9rX0DvucMDslw4sF-Io",
   authDomain: "internship-5434c.firebaseapp.com",
@@ -18,7 +17,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-const STORAGE_KEY = 'intern-dashboard-v8'; // 升級版本號以整合簽到與主題資料
+const STORAGE_KEY = 'intern-dashboard-v9'; // 更新版本號
 
 const APP = {
   state: {
@@ -34,9 +33,9 @@ const APP = {
     expenses: [],
     notes: [],
     journals: [],
-    // ⬇️ 新增：遊戲化簽到與主題系統變數
     checkInCount: 0,
     lastCheckInDate: '',
+    checkInHistory: [], // ⬇️ 新增：用來記錄具體簽到的每一天
     currentTheme: 'default',
     unlockedThemes: ['default'],
     reminders: [
@@ -68,8 +67,8 @@ const APP = {
       const d = new Date();
       this.state.currentExpenseMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
+    if (!this.state.checkInHistory) this.state.checkInHistory = []; // 相容舊資料
 
-    // 啟動時立刻套用目前選擇的主題配色
     this.applyTheme();
     this.renderAll();
     this.fetchExchangeRate();
@@ -83,8 +82,6 @@ const APP = {
         if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = user.displayName;
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'none';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'block';
-        this.applyTheme();
-        this.renderAll();
       } else {
         this.firebaseUser = null;
         this.state.user = { isLoggedIn: false, name: '' };
@@ -93,9 +90,16 @@ const APP = {
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'block';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'none';
         this.saveStateLocally(); 
-        this.applyTheme();
-        this.renderAll();
       }
+      this.applyTheme();
+      this.renderAll();
+
+      // ⬇️ 核心：資料讀取完畢後，如果今天還沒簽到，就自動跳出視窗
+      setTimeout(() => {
+        if (this.state.lastCheckInDate !== this.getTodayStr()) {
+          this.showDailyCheckInPopup();
+        }
+      }, 500);
     });
   },
 
@@ -134,10 +138,9 @@ const APP = {
       monthDisplay: document.getElementById('current-month-display'),
       monthlyExpenseList: document.getElementById('monthly-expense-list'),
       
-      // ⬇️ 新增：簽到與主題切換 DOM 節點
-      btnCheckIn: document.getElementById('btn-checkin'),
-      checkInStatusText: document.getElementById('checkin-status-text'),
       themeSelect: document.getElementById('settings-theme-select'),
+      historyCheckinCount: document.getElementById('history-checkin-count'),
+      historyLastCheckin: document.getElementById('history-last-checkin'),
       
       modal: document.getElementById('modal-overlay'),
       modalClose: document.getElementById('modal-close'),
@@ -211,12 +214,6 @@ const APP = {
       });
     }
 
-    // ⬇️ 新增：點擊簽到監聽器
-    if (this.dom.btnCheckIn) {
-      this.dom.btnCheckIn.addEventListener('click', () => this.handleCheckIn());
-    }
-
-    // ⬇️ 新增：切換主題選單監聽器
     if (this.dom.themeSelect) {
       this.dom.themeSelect.addEventListener('change', (e) => {
         this.state.currentTheme = e.target.value;
@@ -232,7 +229,7 @@ const APP = {
         const text = noteInput.value.trim();
         if (text) { 
           this.state.notes.push({ id: Date.now(), text, date: this.getNowString() }); 
-          this.checkShibaEgg(text); // 檢查狗關鍵字彩蛋
+          this.checkShibaEgg(text); 
           noteInput.value = ''; 
           this.saveState(); 
           alert('備註已儲存'); 
@@ -247,7 +244,7 @@ const APP = {
         const text = journalInput.value.trim();
         if (text) { 
           this.state.journals.push({ id: Date.now(), week: this.getWeekNum(), text, date: this.getNowString() }); 
-          this.checkShibaEgg(text); // 檢查狗關鍵字彩蛋
+          this.checkShibaEgg(text); 
           journalInput.value = ''; 
           this.saveState(); 
           alert('週誌已儲存'); 
@@ -274,6 +271,7 @@ const APP = {
     bindModal('btn-edit-quick-expense', 'quickExpense');
     bindModal('btn-manage-note', 'note');
     bindModal('btn-manage-journal', 'journal');
+    bindModal('btn-view-checkin-history', 'checkInHistory'); // 綁定底部的歷史紀錄按鈕
     
     if (this.dom.modalClose) this.dom.modalClose.addEventListener('click', () => { this.dom.modal.classList.remove('active'); });
 
@@ -380,20 +378,43 @@ const APP = {
     } catch (e) { console.warn('匯率更新失敗'); }
   },
 
-  // ⬇️ 新增：主動簽到處理大腦
+  // ⬇️ 新增：自動跳出簽到視窗的邏輯
+  showDailyCheckInPopup() {
+    if (!this.dom.modal) return;
+    this.dom.modal.classList.add('active');
+    this.dom.modalTitle.textContent = '🌟 每日簽到';
+    
+    this.dom.modalBody.innerHTML = `
+      <div style="text-align: center; padding: 20px 10px;">
+        <p style="margin-bottom: 24px; font-size: 1.1rem; color: var(--text); line-height: 1.6;">
+          日安！新的一天開始了！<br>
+          記得完成今日簽到，累積專屬主題解鎖進度喔！
+        </p>
+        <button class="btn" id="btn-modal-checkin" style="width: 100%; font-size: 1.1rem; padding: 12px;">完成簽到 <span class="dynamic-icon icon-checkin"></span></button>
+      </div>
+    `;
+
+    document.getElementById('btn-modal-checkin').addEventListener('click', () => {
+      this.handleCheckIn();
+      this.dom.modal.classList.remove('active');
+    });
+  },
+
   handleCheckIn() {
     const today = this.getTodayStr();
-    if (this.state.lastCheckInDate === today) {
-      alert('今天已經簽到過囉！明天再來吧！');
-      return;
-    }
+    if (this.state.lastCheckInDate === today) return;
     
     this.state.checkInCount++;
     this.state.lastCheckInDate = today;
     
+    // 將今天加入歷史陣列
+    if (!this.state.checkInHistory) this.state.checkInHistory = [];
+    if (!this.state.checkInHistory.includes(today)) {
+      this.state.checkInHistory.push(today);
+    }
+    
     let msg = `簽到成功！目前已累計簽到 ${this.state.checkInCount} 天！`;
     
-    // 檢查解鎖門檻
     if (this.state.checkInCount >= 14 && !this.state.unlockedThemes.includes('theme-monochrome')) {
       this.state.unlockedThemes.push('theme-monochrome');
       msg += '\n\n🎉 達成 14 天簽到！已解鎖主題「簡約黑白」！';
@@ -416,21 +437,18 @@ const APP = {
     this.renderAll();
   },
 
-  // ⬇️ 新增：狗相關關鍵字彩蛋檢查器
   checkShibaEgg(text) {
     if (this.state.unlockedThemes.includes('theme-shiba-gold')) return;
     
-    // 定義所有與狗有關的關鍵字群
-    const dogKeywords = ['狗', '犬', 'dog', '柴犬', 'shiba', '汪汪', '小狗', 'puppy'];
+    const dogKeywords = ['狗', '犬', 'dog', '柴犬', 'shiba', '汪汪', '小狗', '因', 'puppy'];
     const hasKeyword = dogKeywords.some(kw => text.toLowerCase().includes(kw));
     
     if (hasKeyword) {
       this.state.unlockedThemes.push('theme-shiba-gold');
-      alert('🐾 隱藏彩蛋觸發！\n偵測到紀錄中包含狗的相關文字！已成功解鎖特殊單獨主題：「狗狗」！🐶✨\n可以去設定頁面切換看看囉！');
+      alert('🐾 隱藏彩蛋觸發！\n偵測到紀錄中包含狗的相關文字！已成功解鎖特殊單獨主題：「暖心柴柴版」！🐶✨\n可以去設定頁面切換看看囉！');
     }
   },
 
-  // ⬇️ 新增：套用 body class 主題樣式
   applyTheme() {
     document.body.classList.remove('theme-monochrome', 'theme-neon-sakura', 'theme-makie-gold', 'theme-aurora-stage', 'theme-shiba-gold');
     if (this.state.currentTheme !== 'default') {
@@ -451,30 +469,17 @@ const APP = {
     this.renderChecklist();
     this.updateDashboard();
     
-    // 渲染簽到狀態與設定頁的主題下拉選單
-    this.renderCheckInUI();
+    this.renderCheckInHistoryUI();
     this.renderThemeSelectUI();
   },
 
-  // ⬇️ 新增：渲染簽到按鈕外觀
-  renderCheckInUI() {
-    if (!this.dom.btnCheckIn || !this.dom.checkInStatusText) return;
-    const today = this.getTodayStr();
-    
-    if (this.state.lastCheckInDate === today) {
-      this.dom.btnCheckIn.textContent = '已簽到 ✓';
-      this.dom.btnCheckIn.style.opacity = '0.6';
-      this.dom.btnCheckIn.style.pointerEvents = 'none';
-      this.dom.checkInStatusText.innerHTML = `今天已完成簽到！(目前累計簽到 <span class="text-primary" style="font-weight:bold;">${this.state.checkInCount}</span> 天)`;
-    } else {
-      this.dom.btnCheckIn.textContent = '點我簽到 ✍️';
-      this.dom.btnCheckIn.style.opacity = '1';
-      this.dom.btnCheckIn.style.pointerEvents = 'auto';
-      this.dom.checkInStatusText.innerHTML = `今天尚未簽到 (目前累計簽到 <span class="text-primary" style="font-weight:bold;">${this.state.checkInCount}</span> 天)`;
-    }
+  // ⬇️ 新增：更新首頁底部的歷史紀錄數字
+  renderCheckInHistoryUI() {
+    if (!this.dom.historyCheckinCount || !this.dom.historyLastCheckin) return;
+    this.dom.historyCheckinCount.textContent = this.state.checkInCount || 0;
+    this.dom.historyLastCheckin.textContent = this.state.lastCheckInDate || '尚無紀錄';
   },
 
-  // ⬇️ 新增：動態渲染設定頁面中「有解鎖的主題」
   renderThemeSelectUI() {
     if (!this.dom.themeSelect) return;
     this.dom.themeSelect.innerHTML = '';
@@ -485,15 +490,13 @@ const APP = {
       { value: 'theme-neon-sakura', label: '🔒 100天簽到：夜櫻霓虹' },
       { value: 'theme-makie-gold', label: '🔒 200天簽到：蒔繪金箔' },
       { value: 'theme-aurora-stage', label: '🔒 300天簽到：幻光星海' },
-      { value: 'theme-shiba-gold', label: '🐾 特殊彩蛋：狗狗 🐶' },
+      { value: 'theme-shiba-gold', label: '🐾 特殊彩蛋：暖心柴柴版 🐶' },
     ];
     
     themeOptions.forEach(opt => {
-      // 只有預設主題，或者已經存在解鎖清單中的主題，才會顯示在選單裡
       if (opt.value === 'default' || this.state.unlockedThemes.includes(opt.value)) {
         const o = document.createElement('option');
         o.value = opt.value;
-        // 把解鎖後的「🔒」圖案拿掉
         o.textContent = opt.label.replace('🔒 ', '✨ 已解鎖：');
         if (this.state.currentTheme === opt.value) o.selected = true;
         this.dom.themeSelect.appendChild(o);
@@ -679,7 +682,19 @@ const APP = {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     };
 
-    if (type === 'punch') {
+    // ⬇️ 新增：把簽到歷史資料餵給摺疊面板
+    if (type === 'checkInHistory') {
+      this.dom.modalTitle.textContent = '歷史簽到紀錄 (依月份分類)';
+      const historyArr = (this.state.checkInHistory || []).map(date => ({ date }));
+      
+      renderGrouped(historyArr, item => item.date.substring(0, 7), (item) => {
+        const div = document.createElement('div');
+        div.className = 'history-card';
+        div.innerHTML = `<p style="margin: 0;"><strong>✅ ${item.date}</strong> <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 8px;">已完成簽到</span></p>`;
+        return div;
+      });
+
+    } else if (type === 'punch') {
       this.dom.modalTitle.textContent = '打卡歷史紀錄 (依月份分類)';
       const punchArray = Object.keys(this.state.punchRecords).map(date => ({
         date, data: this.state.punchRecords[date]
