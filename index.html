@@ -79,14 +79,16 @@
           <button class="btn-menu" id="menu-toggle">☰</button>
         </div>
         <div class="page-content">
+          
+          <div class="card" style="margin-bottom: 20px;">
+            <div class="progress-label-row">
+              <label style="color: var(--text-muted); font-size: 0.95rem;">當月支出總計</label>
+              <strong id="progress-expense-text" class="text-primary" style="font-size: 1.6rem;">￥0 / NT$0</strong>
+            </div>
+          </div>
+
           <div class="card">
             <div class="progress-compact">
-              <div class="progress-item">
-                <div class="progress-label-row">
-                  <label>當月支出</label>
-                  <strong id="progress-expense-text" class="text-primary">￥0</strong>
-                </div>
-              </div>
               <div class="progress-item">
                 <div class="progress-label-row">
                   <label>實習進度</label>
@@ -116,6 +118,13 @@
               </div>
             </div>
           </div>
+
+          <section class="section">
+            <h2>近期提醒</h2>
+            <div id="dash-reminders" class="reminder-list card"></div>
+          </section>
+        </div>
+      </div>
 
           <section class="section">
             <h2>近期提醒</h2>

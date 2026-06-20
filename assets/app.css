@@ -273,10 +273,15 @@ html, body {
 .input-group input,
 .styled-select {
   width: 100%;
+  max-width: 100%; /* 強制不能超出父容器 */
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 0.95rem;
+  box-sizing: border-box; /* 確保 padding 不會撐破寬度 */
+  -webkit-appearance: none; /* 移除蘋果預設的奇怪立體感 */
+  appearance: none;
+  background: #ffffff; /* 強制覆蓋蘋果的灰色背景 */
 }
 
 .input-group input:focus,
@@ -494,6 +499,14 @@ textarea {
 
   .desktop-sidebar {
     display: none;
+    /* 以下為新增：讓選單變成浮動抽屜 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 260px;
+    z-index: 999; /* 確保浮在最上層 */
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15); /* 加上陰影更有立體感 */
   }
 
   .mobile-tabs {
