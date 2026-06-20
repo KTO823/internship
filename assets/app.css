@@ -675,3 +675,30 @@ body.theme-shiba-gold {
   --text-muted: #9e846f;    /* 淺拿鐵色 */
   --border: #f0e4d8;        /* 淺淺的餅乾色邊框 */
 }
+/* ==========================================================================
+   動態主題圖示控制 (隨主題自動變換圖示形狀)
+   ========================================================================== */
+
+/* --- 1. 預設標準藍的圖示 --- */
+.icon-settings::before { content: '⚙️'; }
+.icon-checkin::before { content: '✍️'; }
+
+/* --- 2. 14天獎勵：簡約黑白的圖示 (走極簡風) --- */
+body.theme-monochrome .icon-settings::before { content: '⚿'; }
+body.theme-monochrome .icon-checkin::before { content: '✓'; }
+
+/* --- 3. 100天獎勵：夜櫻霓虹的圖示 (滿滿櫻花感) --- */
+body.theme-neon-sakura .icon-settings::before { content: '🌸'; }
+body.theme-neon-sakura .icon-checkin::before { content: '✨'; }
+
+/* --- 4. 200天獎勵：蒔繪金箔的圖示 (日系奢華風) --- */
+body.theme-makie-gold .icon-settings::before { content: '🔱'; }
+body.theme-makie-gold .icon-checkin::before { content: '🖋️'; }
+
+/* --- 5. 300天獎勵：幻光星海的圖示 (宇宙科幻感) --- */
+body.theme-aurora-stage .icon-settings::before { content: '🪐'; }
+body.theme-aurora-stage .icon-checkin::before { content: '🚀'; }
+
+/* --- 🐾 獨立彩蛋：暖心柴柴版的圖示 (柴犬專屬！超可愛) --- */
+body.theme-shiba-gold .icon-settings::before { content: '🦴'; } /* 設定變成小骨頭！ */
+body.theme-shiba-gold .icon-checkin::before { content: '🐾'; }  /* 簽到變成小肉墊！ */

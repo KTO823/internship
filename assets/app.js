@@ -421,12 +421,12 @@ const APP = {
     if (this.state.unlockedThemes.includes('theme-shiba-gold')) return;
     
     // 定義所有與狗有關的關鍵字群
-    const dogKeywords = ['狗', '犬', 'dog', '柴犬', 'shiba', '汪汪', '小狗', '因', 'puppy'];
+    const dogKeywords = ['狗', '犬', 'dog', '柴犬', 'shiba', '汪汪', '小狗', 'puppy'];
     const hasKeyword = dogKeywords.some(kw => text.toLowerCase().includes(kw));
     
     if (hasKeyword) {
       this.state.unlockedThemes.push('theme-shiba-gold');
-      alert('🐾 隱藏彩蛋觸發！\n偵測到紀錄中包含狗的相關文字！已成功解鎖特殊單獨主題：「蒔繪金箔-柴犬版」！🐶✨\n可以去設定頁面切換看看囉！');
+      alert('🐾 隱藏彩蛋觸發！\n偵測到紀錄中包含狗的相關文字！已成功解鎖特殊單獨主題：「狗狗」！🐶✨\n可以去設定頁面切換看看囉！');
     }
   },
 
@@ -485,7 +485,7 @@ const APP = {
       { value: 'theme-neon-sakura', label: '🔒 100天簽到：夜櫻霓虹' },
       { value: 'theme-makie-gold', label: '🔒 200天簽到：蒔繪金箔' },
       { value: 'theme-aurora-stage', label: '🔒 300天簽到：幻光星海' },
-      { value: 'theme-shiba-gold', label: '🐾 特殊彩蛋：蒔繪金箔-柴犬版 🐶' },
+      { value: 'theme-shiba-gold', label: '🐾 特殊彩蛋：狗狗 🐶' },
     ];
     
     themeOptions.forEach(opt => {
