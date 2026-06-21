@@ -12,10 +12,6 @@ const firebaseConfig = {
   appId: "1:997860315918:web:562eba719dcd16780f7d5f"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
 
 const STORAGE_KEY = 'intern-dashboard-v9'; // 更新版本號
 
@@ -864,7 +860,7 @@ const APP = {
         return div;
       });
       // 在 APP.openModal(type) 裡的 if/else 結構中加入
-      } else if (type === 'gallery') {
+      if (type === 'gallery') {
         this.dom.modalTitle.textContent = '📸 實習相簿';
         this.dom.modalBody.innerHTML = `
             <div style="margin-bottom: 20px; display:flex; gap: 10px;">
@@ -903,8 +899,8 @@ const APP = {
                       alert('圖片上傳成功！');
                   }
               );
-          });
       });
+    }
   },
 
 
