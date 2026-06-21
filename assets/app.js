@@ -423,19 +423,19 @@ const APP = {
     
     let msg = `簽到成功！目前已累計簽到 ${this.state.checkInCount} 天！`;
     
-    if (this.state.checkInCount >= 1 && !this.state.unlockedThemes.includes('theme-monochrome')) {
+    if (this.state.checkInCount >= 14 && !this.state.unlockedThemes.includes('theme-monochrome')) {
       this.state.unlockedThemes.push('theme-monochrome');
       msg += '\n\n🎉 達成 14 天簽到！已解鎖主題「簡約黑白」！';
     }
-    if (this.state.checkInCount >= 1 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
+    if (this.state.checkInCount >= 100 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
       this.state.unlockedThemes.push('theme-neon-sakura');
       msg += '\n\n🎉 達成 100 天簽到！已解鎖主題「夜櫻霓虹」！';
     }
-    if (this.state.checkInCount >= 1 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
+    if (this.state.checkInCount >= 200 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
       this.state.unlockedThemes.push('theme-makie-gold');
       msg += '\n\n🎉 達成 200 天簽到！已解鎖主題「蒔繪金箔」！';
     }
-    if (this.state.checkInCount >= 1 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
+    if (this.state.checkInCount >= 300 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
       this.state.unlockedThemes.push('theme-aurora-stage');
       msg += '\n\n🎉 達成 300 天簽到！已解鎖主題「幻光星海」！';
     }
@@ -763,95 +763,88 @@ const APP = {
         <div style="margin-bottom: 20px; display:flex; gap: 10px;">
             <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
             <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
+            <button class="btn secondary" id="export-gallery">匯出相簿</button>
         </div>
         <div id="upload-progress-container" style="display:none; margin-bottom: 20px;">
             <div class="progress-bar" style="background: rgba(0,0,0,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
-                <span id="upload-progress-bar" style="display: block; height: 100%; width: 0%; background: var(--primary); transition: 0.3s;"></span>
+                <span id="upload-progress-bar" style="display: block; height: 100%; width: 0%; background: var(--primary); transition: width 0.3s;"></span>
             </div>
             <p id="upload-status" style="font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top: 8px;">準備上傳...</p>
         </div>
         <div class="masonry-grid" id="modal-gallery-grid" style="column-count: 2; column-gap: 15px;"></div>
       `;
-      this.renderGallery();
-      document.getElementById('image-upload').addEventListener('change', (e) => this.handleImageUpload(e));
-    }
-  },
 
-  renderGallery() {
-    const grid = document.getElementById('modal-gallery-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    const images = this.state.galleryImages || [];
-    if (images.length === 0) {
-      grid.innerHTML = '<p style="color:gray; font-size:0.9rem;">目前沒有照片，點擊上方按鈕上傳！</p>';
-      return;
-    }
-    images.forEach((img, idx) => {
-      const div = document.createElement('div');
-      div.className = 'gallery-item';
-      div.style.cssText = 'margin-bottom: 15px; border-radius: 12px; overflow: hidden; position: relative;';
-      div.innerHTML = `
-          <img src="${img.url}" style="width: 100%; display: block;" alt="實習照片">
-          <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 6px; font-size: 0.75rem;">
-              ${img.date}
-              <button onclick="APP.deleteGalleryImage(${idx})" style="float:right; background:none; border:none; color:#ff4444; cursor:pointer;">刪除</button>
-          </div>
-      `;
-      grid.appendChild(div);
-    });
-  },
+      // 1. 渲染已經上傳的圖片 (這樣上傳完才看得到照片！)
+      const grid = document.getElementById('modal-gallery-grid');
+      const images = this.state.galleryImages || [];
+      if (images.length === 0) {
+        grid.innerHTML = '<p style="color:gray; font-size:0.9rem;">目前沒有照片，點擊上方按鈕上傳！</p>';
+      } else {
+        images.forEach((img, idx) => {
+          grid.innerHTML += `
+            <div class="gallery-item" style="margin-bottom: 15px; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--border);">
+              <img src="${img.url}" style="width: 100%; display: block;" alt="實習照片">
+              <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 6px; font-size: 0.75rem;">
+                ${img.date}
+                <button onclick="APP.deleteItem('galleryImages', ${idx}, 'gallery')" style="float:right; background:none; border:none; color:#ff4444; cursor:pointer;">刪除</button>
+              </div>
+            </div>`;
+        });
+      }
 
-  deleteGalleryImage(idx) {
-    if (confirm('確定要刪除這張照片嗎？')) {
-      this.state.galleryImages.splice(idx, 1);
-      this.saveState();
-      this.renderGallery();
-    }
-  },
-
-  handleImageUpload(e) {
-    const files = e.target.files;
-    if (files.length === 0) return;
-    if (!this.firebaseUser) {
-      alert('請先在設定頁登入 Google 帳號，才能上傳圖片到雲端喔！');
-      return;
-    }
-
-    const progressContainer = document.getElementById('upload-progress-container');
-    const progressBar = document.getElementById('upload-progress-bar');
-    const statusText = document.getElementById('upload-status');
-    progressContainer.style.display = 'block';
-
-    let completed = 0;
-    Array.from(files).forEach((file, index) => {
-      const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          progressBar.style.width = `${progress}%`;
-          statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
-        },
-        (error) => {
-          alert('上傳失敗: ' + error.message);
-          progressContainer.style.display = 'none';
-        },
-        async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          this.state.galleryImages = this.state.galleryImages || [];
-          this.state.galleryImages.push({ url: downloadURL, date: this.getNowString() });
-          this.saveState();
-          completed++;
-          
-          if (completed === files.length) {
-            statusText.textContent = '全部上傳完成！';
-            setTimeout(() => { progressContainer.style.display = 'none'; }, 1500);
-            this.renderGallery(); // 直接重新渲染圖片，不用重開彈窗
-          }
+      // 2. 綁定上傳功能與進度條動畫
+      document.getElementById('image-upload').addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files.length === 0) return;
+        
+        // 防呆：確認是否已登入
+        if (!this.firebaseUser) {
+          alert('請先在設定頁登入 Google 帳號，才能上傳圖片到雲端喔！');
+          return;
         }
-      );
-    });
+
+        const progressContainer = document.getElementById('upload-progress-container');
+        const progressBar = document.getElementById('upload-progress-bar');
+        const statusText = document.getElementById('upload-status');
+        
+        progressContainer.style.display = 'block'; // 顯示進度條
+        let completedCount = 0; // 記錄完成數量
+
+        Array.from(files).forEach((file, index) => {
+          const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
+          const uploadTask = uploadBytesResumable(storageRef, file);
+
+          uploadTask.on('state_changed', 
+            (snapshot) => {
+              // 計算並顯示進度 (這裡原本寫成 null，難怪不會動！)
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              progressBar.style.width = `${progress}%`;
+              statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
+            }, 
+            (error) => {
+              alert('上傳失敗: ' + error.message);
+              progressContainer.style.display = 'none';
+            }, 
+            async () => {
+              // 上傳成功，取得圖片網址
+              const url = await getDownloadURL(uploadTask.snapshot.ref);
+              this.state.galleryImages = this.state.galleryImages || [];
+              this.state.galleryImages.push({ url, date: this.getNowString() });
+              this.saveState();
+              
+              completedCount++;
+              if (completedCount === files.length) {
+                 statusText.textContent = '全部上傳完成！';
+                 // 停頓 1 秒讓使用者看到完成，然後重新整理畫面顯示新照片
+                 setTimeout(() => {
+                   this.openModal('gallery'); 
+                 }, 1000);
+              }
+            }
+          );
+        });
+      });
+    }
   },
 
   deleteItem(arrayName, index, modalToReopen) { 
