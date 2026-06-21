@@ -638,9 +638,9 @@ const APP = {
     if (urgents.length === 0) dashList.innerHTML = '<p style="color:gray; font-size:0.9rem; padding:10px;">目前無 30 天內即將到期的任務，請繼續保持！</p>';
   },
 
-  openModal(type) {
+openModal(type) {
     if (!this.dom.modal) return;
-    this.dom.modal.classList.add('active'); 
+    this.dom.modal.classList.add('active');
     this.dom.modalBody.innerHTML = '';
 
     const renderGrouped = (items, dateExtractor, renderItemFn) => {
@@ -650,31 +650,25 @@ const APP = {
         if (!grouped[month]) grouped[month] = [];
         grouped[month].push(item);
       });
-
       const sortedMonths = Object.keys(grouped).sort().reverse();
       if (sortedMonths.length === 0) {
         this.dom.modalBody.innerHTML = '<p style="text-align:center; color:gray; padding: 20px;">尚無紀錄</p>';
         return;
       }
-
       sortedMonths.forEach((month, index) => {
         const details = document.createElement('details');
         if (index === 0) details.open = true;
         details.style.marginBottom = '12px';
-
         const summary = document.createElement('summary');
         const [y, m] = month.split('-');
         summary.style.cssText = 'font-size: 1.05rem; font-weight: 600; padding: 12px 16px; background: var(--primary-light); color: var(--primary); border-radius: 8px; cursor: pointer; outline: none; margin-bottom: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;';
         summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ 點擊展開/收起</span>`;
         details.appendChild(summary);
-
         const content = document.createElement('div');
         content.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 0 4px 8px 4px;';
-
         [...grouped[month]].reverse().forEach(item => {
           content.appendChild(renderItemFn(item));
         });
-
         details.appendChild(content);
         this.dom.modalBody.appendChild(details);
       });
@@ -686,223 +680,161 @@ const APP = {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     };
 
-    // ⬇️ 新增：把簽到歷史資料改成互動式月曆彈窗
     if (type === 'checkInHistory') {
       this.dom.modalTitle.textContent = '📅 歷史簽到月曆';
-      
-      // 預設顯示當前月份
-      let currentViewDate = new Date(); 
-      
-      const renderCalendar = () => {
-        this.dom.modalBody.innerHTML = '';
-        
-        const year = currentViewDate.getFullYear();
-        const month = currentViewDate.getMonth(); // 0-11
-        
-        // 1. 標題與切換月份按鈕
-        const headerDiv = document.createElement('div');
-        headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 8px;';
-        
-        const btnPrev = document.createElement('button');
-        btnPrev.className = 'btn-icon';
-        btnPrev.textContent = '◀';
-        btnPrev.style.fontSize = '1.2rem';
-        btnPrev.onclick = () => { currentViewDate.setMonth(month - 1); renderCalendar(); };
-        
-        const titleSpan = document.createElement('span');
-        titleSpan.style.cssText = 'font-weight: bold; font-size: 1.1rem; color: var(--text);';
-        titleSpan.textContent = `${year}年 ${month + 1}月`;
-        
-        const btnNext = document.createElement('button');
-        btnNext.className = 'btn-icon';
-        btnNext.textContent = '▶';
-        btnNext.style.fontSize = '1.2rem';
-        btnNext.onclick = () => { currentViewDate.setMonth(month + 1); renderCalendar(); };
-        
-        headerDiv.appendChild(btnPrev);
-        headerDiv.appendChild(titleSpan);
-        headerDiv.appendChild(btnNext);
-        this.dom.modalBody.appendChild(headerDiv);
-        
-        // 2. 月曆網格容器
-        const grid = document.createElement('div');
-        grid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;';
-        
-        // 3. 星期標題
-        const days = ['日', '一', '二', '三', '四', '五', '六'];
-        days.forEach(d => {
-          const el = document.createElement('div');
-          el.style.cssText = 'font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-bottom: 8px;';
-          el.textContent = d;
-          grid.appendChild(el);
-        });
-        
-        // 4. 計算該月天數與起始日
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        // 填充月初空白格子
-        for (let i = 0; i < firstDay; i++) {
-          const empty = document.createElement('div');
-          grid.appendChild(empty);
-        }
-        
-        // 5. 填充日期格子與簽到狀態
-        const historySet = new Set(this.state.checkInHistory || []);
-        
-        for (let i = 1; i <= daysInMonth; i++) {
-          const dateDiv = document.createElement('div');
-          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-          const hasCheckedIn = historySet.has(dateStr);
-          const isToday = dateStr === this.getTodayStr();
-          
-          dateDiv.style.cssText = `
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            border: 1px solid ${isToday ? 'var(--primary)' : 'var(--border)'};
-            background: ${hasCheckedIn ? 'var(--primary-light)' : 'var(--card-bg)'};
-            color: ${hasCheckedIn ? 'var(--primary)' : 'var(--text)'};
-            font-weight: ${hasCheckedIn || isToday ? '600' : 'normal'};
-            font-size: 0.95rem;
-          `;
-          
-          // 有簽到的日子，下方會出現動態主題的圖示 (櫻花、肉墊、勾勾等)
-          dateDiv.innerHTML = `
-            <span>${i}</span>
-            <span style="font-size: 0.7rem; height: 12px; margin-top: 2px;">
-              ${hasCheckedIn ? '<span class="dynamic-icon icon-checkin"></span>' : ''}
-            </span>
-          `;
-          
-          grid.appendChild(dateDiv);
-        }
-        
-        this.dom.modalBody.appendChild(grid);
-      };
-      
-      // 首次呼叫渲染
-      renderCalendar();
-
-    } else if (type === 'punch') {
-
+      // ... (保留你原有的月曆邏輯) ...
     } else if (type === 'punch') {
       this.dom.modalTitle.textContent = '打卡歷史紀錄 (依月份分類)';
-      const punchArray = Object.keys(this.state.punchRecords).map(date => ({
-        date, data: this.state.punchRecords[date]
-      }));
-      
+      const punchArray = Object.keys(this.state.punchRecords).map(date => ({ date, data: this.state.punchRecords[date] }));
       renderGrouped(punchArray, item => item.date.substring(0, 7), (item) => {
         const { date, data: day } = item;
-        const div = document.createElement('div'); 
-        div.className = 'history-card'; 
+        const div = document.createElement('div'); div.className = 'history-card';
         let html = `<p><strong>${date}</strong></p>`;
-        if (day.manualTotal > 0) {
-          html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
-        } else {
-          day.records.forEach((r, i) => { 
-            html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`; 
-          });
-        }
-        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`; 
-        div.innerHTML = html; 
-        return div;
+        if (day.manualTotal > 0) html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
+        else day.records.forEach((r, i) => html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`);
+        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`;
+        div.innerHTML = html; return div;
       });
-
     } else if (type === 'expense') {
       this.dom.modalTitle.textContent = '記帳明細歷史 (依月份分類)';
       const exps = this.state.expenses.map((e, idx) => ({ ...e, _idx: idx }));
-      
       renderGrouped(exps, item => item.isoMonth || getMonthFromId(item.id), (e) => {
-        const div = document.createElement('div'); 
-        div.className = 'history-card'; 
-        div.innerHTML = `
-          <p style="color:gray; font-size:0.8rem;">${e.date}</p>
-          <p><strong>${escapeHtml(e.desc)}</strong>：￥${e.amount}</p>
-          <div class="history-actions">
-            <button class="btn btn-sm danger" onclick="APP.deleteItem('expenses', ${e._idx}, 'expense')">刪除</button>
-          </div>
-        `; 
+        const div = document.createElement('div'); div.className = 'history-card';
+        div.innerHTML = `<p style="color:gray; font-size:0.8rem;">${e.date}</p><p><strong>${escapeHtml(e.desc)}</strong>：￥${e.amount}</p><div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('expenses', ${e._idx}, 'expense')">刪除</button></div>`;
         return div;
       });
-
     } else if (type === 'quickExpense') {
       this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
-      this.state.quickExpenses.forEach((q, idx) => { 
-        const div = document.createElement('div'); div.className = 'history-card'; 
-        div.innerHTML = `<p>${q.label} (￥${q.amount})</p><div class="history-actions"><button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button></div>`; 
-        this.dom.modalBody.appendChild(div); 
-      });
-      const addBtn = document.createElement('button'); addBtn.className = 'btn secondary'; addBtn.textContent = '+ 新增快捷鍵'; 
-      addBtn.onclick = () => { const label = prompt('按鈕名稱 (例: 咖啡)'); if (!label) return; const amount = Number(prompt('金額')); if (amount) { this.state.quickExpenses.push({ id: Date.now(), label, amount }); this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); } }; 
-      this.dom.modalBody.appendChild(addBtn);
-
+      // ... (保留原邏輯) ...
     } else if (type === 'note' || type === 'journal') {
-      this.dom.modalTitle.textContent = type === 'note' ? '歷史備註 (依月份分類)' : '歷史週誌 (依月份分類)'; 
-      const targetArr = this.state[type + 's'].map((item, idx) => ({ ...item, _idx: idx }));
-      
-      renderGrouped(targetArr, item => getMonthFromId(item.id), (item) => {
-        const div = document.createElement('div'); 
-        div.className = 'history-card'; 
-        const title = type === 'journal' ? `第 ${item.week} 週` : ''; 
-        div.innerHTML = `
-          <p><strong>${title}</strong> <span style="font-size:0.8rem; color:gray;">${item.date}</span></p>
-          <p style="white-space:pre-wrap;">${escapeHtml(item.text)}</p>
-          <div class="history-actions">
-            ${type === 'journal' ? `<button class="btn btn-sm secondary" onclick="APP.exportJournal(${item._idx})">匯出 PDF</button>` : ''} 
-            <button class="btn btn-sm secondary" onclick="APP.editTextItem('${type}s', ${item._idx}, '${type}')">編輯</button> 
-            <button class="btn btn-sm danger" onclick="APP.deleteItem('${type}s', ${item._idx}, '${type}')">刪除</button>
-          </div>
-        `; 
-        return div;
-      });
-      // 在 APP.openModal(type) 裡的 if/else 結構中加入
-      if (type === 'gallery') {
-        this.dom.modalTitle.textContent = '📸 實習相簿';
-        this.dom.modalBody.innerHTML = `
-            <div style="margin-bottom: 20px; display:flex; gap: 10px;">
-                <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
-                <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
-                <button class="btn secondary" id="export-gallery">匯出相簿</button>
-            </div>
-            <div class="masonry-grid" id="modal-gallery-grid"></div>
-        `;
-
-        document.getElementById('image-upload').addEventListener('change', (e) => {
-          const files = e.target.files;
-          if (files.length === 0) return;
-
-          const grid = document.getElementById('modal-gallery-grid');
-          // 為每張圖片建立上傳任務
-          Array.from(files).forEach(file => {
-              const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
-              const uploadTask = uploadBytesResumable(storageRef, file);
-
-              // 監聽上傳進度
-              uploadTask.on('state_changed', 
-                  (snapshot) => {
-                      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                      console.log('上傳進度: ' + progress + '%');
-                      // 你可以在這裡更新 UI 上的進度條
-                  }, 
-                  (error) => alert('上傳失敗: ' + error.message),
-                  async () => {
-                      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                      // 成功後將 URL 存入 state 並重新渲染
-                      this.state.galleryImages = this.state.galleryImages || [];
-                      this.state.galleryImages.push({ url: downloadURL, date: this.getNowString() });
-                      this.saveState();
-                      this.openModal('gallery'); // 重新整理彈窗畫面
-                      alert('圖片上傳成功！');
-                  }
-              );
+      this.dom.modalTitle.textContent = type === 'note' ? '歷史備註 (依月份分類)' : '歷史週誌 (依月份分類)';
+      // ... (保留原邏輯) ...
+    } else if (type === 'gallery') {
+      this.dom.modalTitle.textContent = '📸 實習相簿';
+      this.dom.modalBody.innerHTML = `
+        <div style="margin-bottom: 20px; display:flex; gap: 10px;">
+            <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
+            <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
+            <button class="btn secondary" id="export-gallery">匯出相簿</button>
+        </div>
+        <div class="masonry-grid" id="modal-gallery-grid"></div>
+      `;
+      document.getElementById('image-upload').addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files.length === 0) return;
+        Array.from(files).forEach(file => {
+          const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
+          const uploadTask = uploadBytesResumable(storageRef, file);
+          uploadTask.on('state_changed', null, (err) => alert(err.message), async () => {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            this.state.galleryImages = this.state.galleryImages || [];
+            this.state.galleryImages.push({ url, date: this.getNowString() });
+            this.saveState();
+            this.openModal('gallery');
+            alert('上傳成功');
+          });
+        });
       });
     }
-  },
+  }, openModal(type) {
+    if (!this.dom.modal) return;
+    this.dom.modal.classList.add('active');
+    this.dom.modalBody.innerHTML = '';
 
+    const renderGrouped = (items, dateExtractor, renderItemFn) => {
+      const grouped = {};
+      items.forEach(item => {
+        const month = dateExtractor(item);
+        if (!grouped[month]) grouped[month] = [];
+        grouped[month].push(item);
+      });
+      const sortedMonths = Object.keys(grouped).sort().reverse();
+      if (sortedMonths.length === 0) {
+        this.dom.modalBody.innerHTML = '<p style="text-align:center; color:gray; padding: 20px;">尚無紀錄</p>';
+        return;
+      }
+      sortedMonths.forEach((month, index) => {
+        const details = document.createElement('details');
+        if (index === 0) details.open = true;
+        details.style.marginBottom = '12px';
+        const summary = document.createElement('summary');
+        const [y, m] = month.split('-');
+        summary.style.cssText = 'font-size: 1.05rem; font-weight: 600; padding: 12px 16px; background: var(--primary-light); color: var(--primary); border-radius: 8px; cursor: pointer; outline: none; margin-bottom: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;';
+        summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ 點擊展開/收起</span>`;
+        details.appendChild(summary);
+        const content = document.createElement('div');
+        content.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 0 4px 8px 4px;';
+        [...grouped[month]].reverse().forEach(item => {
+          content.appendChild(renderItemFn(item));
+        });
+        details.appendChild(content);
+        this.dom.modalBody.appendChild(details);
+      });
+    };
+
+    const getMonthFromId = (id) => {
+      const d = new Date(Number(id));
+      if (isNaN(d.getTime())) return '未分類';
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    if (type === 'checkInHistory') {
+      this.dom.modalTitle.textContent = '📅 歷史簽到月曆';
+      // ... (保留你原有的月曆邏輯) ...
+    } else if (type === 'punch') {
+      this.dom.modalTitle.textContent = '打卡歷史紀錄 (依月份分類)';
+      const punchArray = Object.keys(this.state.punchRecords).map(date => ({ date, data: this.state.punchRecords[date] }));
+      renderGrouped(punchArray, item => item.date.substring(0, 7), (item) => {
+        const { date, data: day } = item;
+        const div = document.createElement('div'); div.className = 'history-card';
+        let html = `<p><strong>${date}</strong></p>`;
+        if (day.manualTotal > 0) html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
+        else day.records.forEach((r, i) => html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`);
+        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`;
+        div.innerHTML = html; return div;
+      });
+    } else if (type === 'expense') {
+      this.dom.modalTitle.textContent = '記帳明細歷史 (依月份分類)';
+      const exps = this.state.expenses.map((e, idx) => ({ ...e, _idx: idx }));
+      renderGrouped(exps, item => item.isoMonth || getMonthFromId(item.id), (e) => {
+        const div = document.createElement('div'); div.className = 'history-card';
+        div.innerHTML = `<p style="color:gray; font-size:0.8rem;">${e.date}</p><p><strong>${escapeHtml(e.desc)}</strong>：￥${e.amount}</p><div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('expenses', ${e._idx}, 'expense')">刪除</button></div>`;
+        return div;
+      });
+    } else if (type === 'quickExpense') {
+      this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
+      // ... (保留原邏輯) ...
+    } else if (type === 'note' || type === 'journal') {
+      this.dom.modalTitle.textContent = type === 'note' ? '歷史備註 (依月份分類)' : '歷史週誌 (依月份分類)';
+      // ... (保留原邏輯) ...
+    } else if (type === 'gallery') {
+      this.dom.modalTitle.textContent = '📸 實習相簿';
+      this.dom.modalBody.innerHTML = `
+        <div style="margin-bottom: 20px; display:flex; gap: 10px;">
+            <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
+            <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
+            <button class="btn secondary" id="export-gallery">匯出相簿</button>
+        </div>
+        <div class="masonry-grid" id="modal-gallery-grid"></div>
+      `;
+      document.getElementById('image-upload').addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files.length === 0) return;
+        Array.from(files).forEach(file => {
+          const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
+          const uploadTask = uploadBytesResumable(storageRef, file);
+          uploadTask.on('state_changed', null, (err) => alert(err.message), async () => {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            this.state.galleryImages = this.state.galleryImages || [];
+            this.state.galleryImages.push({ url, date: this.getNowString() });
+            this.saveState();
+            this.openModal('gallery');
+            alert('上傳成功');
+          });
+        });
+      });
+    }
+  }, // <--- openModal 結束點
 
   deleteItem(arrayName, index, modalToReopen) { 
     if (confirm('確定刪除？')) { this.state[arrayName].splice(index, 1); this.saveState(); this.renderAll(); if (modalToReopen) this.openModal(modalToReopen); } 
