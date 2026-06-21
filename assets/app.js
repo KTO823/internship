@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 const firebaseConfig = {
   apiKey: "AIzaSyA_O2QrUhJo7YqG9rX0DvucMDslw4sF-Io",
   authDomain: "internship-5434c.firebaseapp.com",
@@ -876,46 +876,35 @@ const APP = {
         `;
 
         document.getElementById('image-upload').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                alert('偵測到圖片: ' + file.name + '，準備上傳至雲端...');
-            }
-        });
+          const files = e.target.files;
+          if (files.length === 0) return;
 
-        // 在 APP 物件中加入這個函數
-        async uploadImages(files) {
-            const grid = document.getElementById('modal-gallery-grid');
-            // 建立進度條容器
-            const progressContainer = document.createElement('div');
-            progressContainer.innerHTML = `<div class="progress-bar"><span id="upload-progress" style="width:0%"></span></div>`;
-            this.dom.modalBody.prepend(progressContainer);
+          const grid = document.getElementById('modal-gallery-grid');
+          // 為每張圖片建立上傳任務
+          Array.from(files).forEach(file => {
+              const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
+              const uploadTask = uploadBytesResumable(storageRef, file);
 
-            const progressBar = document.getElementById('upload-progress');
-            let completed = 0;
-
-            for (const file of files) {
-                // 這是 Firebase Storage 上傳核心
-                const storageRef = firebase.storage().ref(`images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
-                const task = storageRef.put(file);
-
-                task.on('state_changed', 
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        progressBar.style.width = `${progress}%`;
-                    },
-                    (error) => console.error(error),
-                    async () => {
-                        const url = await storageRef.getDownloadURL();
-                        // 把 URL 存入 state.galleryImages 並渲染
-                        this.state.galleryImages.push({ url, date: this.getNowString() });
-                        this.saveState();
-                        this.renderGallery(); // 需要你寫一個 renderGallery 函數
-                        completed++;
-                    }
-                );
-            }
-        }
-    }
+              // 監聽上傳進度
+              uploadTask.on('state_changed', 
+                  (snapshot) => {
+                      const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                      console.log('上傳進度: ' + progress + '%');
+                      // 你可以在這裡更新 UI 上的進度條
+                  }, 
+                  (error) => alert('上傳失敗: ' + error.message),
+                  async () => {
+                      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                      // 成功後將 URL 存入 state 並重新渲染
+                      this.state.galleryImages = this.state.galleryImages || [];
+                      this.state.galleryImages.push({ url: downloadURL, date: this.getNowString() });
+                      this.saveState();
+                      this.openModal('gallery'); // 重新整理彈窗畫面
+                      alert('圖片上傳成功！');
+                  }
+              );
+          });
+      });
   },
 
 
