@@ -736,107 +736,10 @@ openModal(type) {
         });
       });
     }
-  }, openModal(type) {
-    if (!this.dom.modal) return;
-    this.dom.modal.classList.add('active');
-    this.dom.modalBody.innerHTML = '';
+  },
 
-    const renderGrouped = (items, dateExtractor, renderItemFn) => {
-      const grouped = {};
-      items.forEach(item => {
-        const month = dateExtractor(item);
-        if (!grouped[month]) grouped[month] = [];
-        grouped[month].push(item);
-      });
-      const sortedMonths = Object.keys(grouped).sort().reverse();
-      if (sortedMonths.length === 0) {
-        this.dom.modalBody.innerHTML = '<p style="text-align:center; color:gray; padding: 20px;">尚無紀錄</p>';
-        return;
-      }
-      sortedMonths.forEach((month, index) => {
-        const details = document.createElement('details');
-        if (index === 0) details.open = true;
-        details.style.marginBottom = '12px';
-        const summary = document.createElement('summary');
-        const [y, m] = month.split('-');
-        summary.style.cssText = 'font-size: 1.05rem; font-weight: 600; padding: 12px 16px; background: var(--primary-light); color: var(--primary); border-radius: 8px; cursor: pointer; outline: none; margin-bottom: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;';
-        summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ 點擊展開/收起</span>`;
-        details.appendChild(summary);
-        const content = document.createElement('div');
-        content.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 0 4px 8px 4px;';
-        [...grouped[month]].reverse().forEach(item => {
-          content.appendChild(renderItemFn(item));
-        });
-        details.appendChild(content);
-        this.dom.modalBody.appendChild(details);
-      });
-    };
 
-    const getMonthFromId = (id) => {
-      const d = new Date(Number(id));
-      if (isNaN(d.getTime())) return '未分類';
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    };
-
-    if (type === 'checkInHistory') {
-      this.dom.modalTitle.textContent = '📅 歷史簽到月曆';
-      // ... (保留你原有的月曆邏輯) ...
-    } else if (type === 'punch') {
-      this.dom.modalTitle.textContent = '打卡歷史紀錄 (依月份分類)';
-      const punchArray = Object.keys(this.state.punchRecords).map(date => ({ date, data: this.state.punchRecords[date] }));
-      renderGrouped(punchArray, item => item.date.substring(0, 7), (item) => {
-        const { date, data: day } = item;
-        const div = document.createElement('div'); div.className = 'history-card';
-        let html = `<p><strong>${date}</strong></p>`;
-        if (day.manualTotal > 0) html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
-        else day.records.forEach((r, i) => html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`);
-        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`;
-        div.innerHTML = html; return div;
-      });
-    } else if (type === 'expense') {
-      this.dom.modalTitle.textContent = '記帳明細歷史 (依月份分類)';
-      const exps = this.state.expenses.map((e, idx) => ({ ...e, _idx: idx }));
-      renderGrouped(exps, item => item.isoMonth || getMonthFromId(item.id), (e) => {
-        const div = document.createElement('div'); div.className = 'history-card';
-        div.innerHTML = `<p style="color:gray; font-size:0.8rem;">${e.date}</p><p><strong>${escapeHtml(e.desc)}</strong>：￥${e.amount}</p><div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('expenses', ${e._idx}, 'expense')">刪除</button></div>`;
-        return div;
-      });
-    } else if (type === 'quickExpense') {
-      this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
-      // ... (保留原邏輯) ...
-    } else if (type === 'note' || type === 'journal') {
-      this.dom.modalTitle.textContent = type === 'note' ? '歷史備註 (依月份分類)' : '歷史週誌 (依月份分類)';
-      // ... (保留原邏輯) ...
-    } else if (type === 'gallery') {
-      this.dom.modalTitle.textContent = '📸 實習相簿';
-      this.dom.modalBody.innerHTML = `
-        <div style="margin-bottom: 20px; display:flex; gap: 10px;">
-            <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
-            <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
-            <button class="btn secondary" id="export-gallery">匯出相簿</button>
-        </div>
-        <div class="masonry-grid" id="modal-gallery-grid"></div>
-      `;
-      document.getElementById('image-upload').addEventListener('change', (e) => {
-        const files = e.target.files;
-        if (files.length === 0) return;
-        Array.from(files).forEach(file => {
-          const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
-          const uploadTask = uploadBytesResumable(storageRef, file);
-          uploadTask.on('state_changed', null, (err) => alert(err.message), async () => {
-            const url = await getDownloadURL(uploadTask.snapshot.ref);
-            this.state.galleryImages = this.state.galleryImages || [];
-            this.state.galleryImages.push({ url, date: this.getNowString() });
-            this.saveState();
-            this.openModal('gallery');
-            alert('上傳成功');
-          });
-        });
-      });
-    }
-  }, // <--- openModal 結束點
-
-  deleteItem(arrayName, index, modalToReopen) { 
+deleteItem(arrayName, index, modalToReopen) { 
     if (confirm('確定刪除？')) { this.state[arrayName].splice(index, 1); this.saveState(); this.renderAll(); if (modalToReopen) this.openModal(modalToReopen); } 
   },
   
