@@ -683,18 +683,44 @@ const APP = {
         this.dom.modalBody.innerHTML = '';
         const year = currentViewDate.getFullYear();
         const month = currentViewDate.getMonth();
+        
         const headerDiv = document.createElement('div');
-        headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 8px;';
-        const btnPrev = document.createElement('button'); btnPrev.className = 'btn-icon'; btnPrev.textContent = '◀'; btnPrev.style.fontSize = '1.2rem'; btnPrev.onclick = () => { currentViewDate.setMonth(month - 1); renderCalendar(); };
-        const titleSpan = document.createElement('span'); titleSpan.style.cssText = 'font-weight: bold; font-size: 1.1rem; color: var(--text);'; titleSpan.textContent = `${year}年 ${month + 1}月`;
-        const btnNext = document.createElement('button'); btnNext.className = 'btn-icon'; btnNext.textContent = '▶'; btnNext.style.fontSize = '1.2rem'; btnNext.onclick = () => { currentViewDate.setMonth(month + 1); renderCalendar(); };
-        headerDiv.appendChild(btnPrev); headerDiv.appendChild(titleSpan); headerDiv.appendChild(btnNext);
+        headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 4px;';
+        
+        // 優化：改用優雅的單線箭頭，並強制圓形置中
+        const btnPrev = document.createElement('button'); 
+        btnPrev.className = 'btn-icon'; 
+        btnPrev.innerHTML = '&#10094;'; // ❮
+        btnPrev.style.cssText = 'font-size: 1rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;'; 
+        btnPrev.onclick = () => { currentViewDate.setMonth(month - 1); renderCalendar(); };
+        
+        const titleSpan = document.createElement('span'); 
+        titleSpan.style.cssText = 'font-weight: 700; font-size: 1.15rem; color: var(--text); letter-spacing: 1px;'; 
+        titleSpan.textContent = `${year}年 ${month + 1}月`;
+        
+        // 優化：改用優雅的單線箭頭
+        const btnNext = document.createElement('button'); 
+        btnNext.className = 'btn-icon'; 
+        btnNext.innerHTML = '&#10095;'; // ❯
+        btnNext.style.cssText = 'font-size: 1rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;'; 
+        btnNext.onclick = () => { currentViewDate.setMonth(month + 1); renderCalendar(); };
+        
+        headerDiv.appendChild(btnPrev); 
+        headerDiv.appendChild(titleSpan); 
+        headerDiv.appendChild(btnNext);
         this.dom.modalBody.appendChild(headerDiv);
         
         const grid = document.createElement('div');
-        grid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center;';
+        // 優化：加入 minmax(0, 1fr) 避免手機版被撐破，並縮小 gap
+        grid.style.cssText = 'display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; width: 100%; box-sizing: border-box;';
+        
         const days = ['日', '一', '二', '三', '四', '五', '六'];
-        days.forEach(d => { const el = document.createElement('div'); el.style.cssText = 'font-weight: bold; font-size: 0.85rem; color: var(--text-muted); padding-bottom: 8px;'; el.textContent = d; grid.appendChild(el); });
+        days.forEach(d => { 
+            const el = document.createElement('div'); 
+            el.style.cssText = 'font-weight: 600; font-size: 0.8rem; color: var(--text-muted); padding-bottom: 8px;'; 
+            el.textContent = d; 
+            grid.appendChild(el); 
+        });
         
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -706,8 +732,11 @@ const APP = {
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
           const hasCheckedIn = historySet.has(dateStr);
           const isToday = dateStr === this.getTodayStr();
-          dateDiv.style.cssText = `aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${isToday ? 'var(--primary)' : 'var(--border)'}; background: ${hasCheckedIn ? 'var(--primary-light)' : 'transparent'}; color: ${hasCheckedIn ? 'var(--primary)' : 'var(--text)'}; font-weight: ${hasCheckedIn || isToday ? '600' : 'normal'}; font-size: 0.95rem;`;
-          dateDiv.innerHTML = `<span>${i}</span><span style="font-size: 0.7rem; height: 12px; margin-top: 2px;">${hasCheckedIn ? '<span class="dynamic-icon icon-checkin"></span>' : ''}</span>`;
+          
+          // 優化：加入 box-sizing 與調整 padding 確保手機完美正方形
+          dateDiv.style.cssText = `aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${isToday ? 'var(--primary)' : 'var(--border)'}; background: ${hasCheckedIn ? 'var(--primary-light)' : 'transparent'}; color: ${hasCheckedIn ? 'var(--primary)' : 'var(--text)'}; font-weight: ${hasCheckedIn || isToday ? '600' : 'normal'}; font-size: 0.9rem; padding: 2px; box-sizing: border-box;`;
+          
+          dateDiv.innerHTML = `<span style="line-height: 1;">${i}</span><span style="font-size: 0.7rem; height: 12px; margin-top: 2px;">${hasCheckedIn ? '<span class="dynamic-icon icon-checkin"></span>' : ''}</span>`;
           grid.appendChild(dateDiv);
         }
         this.dom.modalBody.appendChild(grid);
