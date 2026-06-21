@@ -868,7 +868,7 @@ const APP = {
         this.dom.modalTitle.textContent = '📸 實習相簿';
         this.dom.modalBody.innerHTML = `
             <div style="margin-bottom: 20px; display:flex; gap: 10px;">
-                <input type="file" id="image-upload" accept="image/*" style="display:none">
+                <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
                 <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
                 <button class="btn secondary" id="export-gallery">匯出相簿</button>
             </div>
@@ -881,8 +881,43 @@ const APP = {
                 alert('偵測到圖片: ' + file.name + '，準備上傳至雲端...');
             }
         });
+
+        // 在 APP 物件中加入這個函數
+        async uploadImages(files) {
+            const grid = document.getElementById('modal-gallery-grid');
+            // 建立進度條容器
+            const progressContainer = document.createElement('div');
+            progressContainer.innerHTML = `<div class="progress-bar"><span id="upload-progress" style="width:0%"></span></div>`;
+            this.dom.modalBody.prepend(progressContainer);
+
+            const progressBar = document.getElementById('upload-progress');
+            let completed = 0;
+
+            for (const file of files) {
+                // 這是 Firebase Storage 上傳核心
+                const storageRef = firebase.storage().ref(`images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
+                const task = storageRef.put(file);
+
+                task.on('state_changed', 
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        progressBar.style.width = `${progress}%`;
+                    },
+                    (error) => console.error(error),
+                    async () => {
+                        const url = await storageRef.getDownloadURL();
+                        // 把 URL 存入 state.galleryImages 並渲染
+                        this.state.galleryImages.push({ url, date: this.getNowString() });
+                        this.saveState();
+                        this.renderGallery(); // 需要你寫一個 renderGallery 函數
+                        completed++;
+                    }
+                );
+            }
+        }
     }
   },
+
 
   deleteItem(arrayName, index, modalToReopen) { 
     if (confirm('確定刪除？')) { this.state[arrayName].splice(index, 1); this.saveState(); this.renderAll(); if (modalToReopen) this.openModal(modalToReopen); } 
