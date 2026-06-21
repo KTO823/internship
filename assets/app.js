@@ -927,6 +927,19 @@ const APP = {
   }
 };
 
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    // 移除所有 active class，給被點擊的加上
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const tag = btn.dataset.tag;
+    document.querySelectorAll('.gallery-item').forEach(item => {
+      item.style.display = (tag === 'all' || item.dataset.tag === tag) ? 'block' : 'none';
+    });
+  });
+});
+
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
 window.APP = APP; 
