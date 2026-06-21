@@ -235,6 +235,13 @@ const APP = {
           alert('備註已儲存'); 
         }
       });
+      // 在 APP.setupListeners() 裡面加上這段
+      const btnOpenGallery = document.getElementById('btn-open-gallery');
+      if (btnOpenGallery) {
+          btnOpenGallery.addEventListener('click', () => {
+              this.openModal('gallery');
+          });
+      }
     }
 
     const saveJournalBtn = document.getElementById('save-journal');
@@ -284,6 +291,7 @@ const APP = {
       btnImport.addEventListener('click', () => fileImport.click());
       fileImport.addEventListener('change', (e) => this.importData(e));
     }
+    
   },
 
   getNowString() { 
@@ -855,6 +863,24 @@ const APP = {
         `; 
         return div;
       });
+      // 在 APP.openModal(type) 裡的 if/else 結構中加入
+      } else if (type === 'gallery') {
+        this.dom.modalTitle.textContent = '📸 實習相簿';
+        this.dom.modalBody.innerHTML = `
+            <div style="margin-bottom: 20px; display:flex; gap: 10px;">
+                <input type="file" id="image-upload" accept="image/*" style="display:none">
+                <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
+                <button class="btn secondary" id="export-gallery">匯出相簿</button>
+            </div>
+            <div class="masonry-grid" id="modal-gallery-grid"></div>
+        `;
+
+        document.getElementById('image-upload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                alert('偵測到圖片: ' + file.name + '，準備上傳至雲端...');
+            }
+        });
     }
   },
 
@@ -939,6 +965,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
   });
 });
+
 
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
