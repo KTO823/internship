@@ -803,7 +803,7 @@ const APP = {
         <div class="masonry-grid" id="modal-gallery-grid" style="column-count: 2; column-gap: 15px;"></div>
       `;
 
-      // 1. 渲染已經上傳的圖片 (這樣上傳完才看得到照片！)
+      // 渲染已有照片
       const grid = document.getElementById('modal-gallery-grid');
       const images = this.state.galleryImages || [];
       if (images.length === 0) {
@@ -821,14 +821,13 @@ const APP = {
         });
       }
 
-      // 2. 綁定上傳功能與進度條動畫
+      // 綁定上傳
       document.getElementById('image-upload').addEventListener('change', (e) => {
         const files = e.target.files;
         if (files.length === 0) return;
         
-        // 防呆：確認是否已登入
         if (!this.firebaseUser) {
-          alert('請先在設定頁登入 Google 帳號，才能上傳圖片到雲端喔！');
+          alert('🚨 錯誤：請先在設定頁登入 Google 帳號！');
           return;
         }
 
@@ -836,41 +835,50 @@ const APP = {
         const progressBar = document.getElementById('upload-progress-bar');
         const statusText = document.getElementById('upload-status');
         
-        progressContainer.style.display = 'block'; // 顯示進度條
-        let completedCount = 0; // 記錄完成數量
+        progressContainer.style.display = 'block';
+        let completedCount = 0;
 
         Array.from(files).forEach((file, index) => {
-          const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
-          const uploadTask = uploadBytesResumable(storageRef, file);
+          try {
+            console.log(`開始準備上傳檔案: ${file.name}`);
+            const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
+            const uploadTask = uploadBytesResumable(storageRef, file);
 
-          uploadTask.on('state_changed', 
-            (snapshot) => {
-              // 計算並顯示進度 (這裡原本寫成 null，難怪不會動！)
-              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              progressBar.style.width = `${progress}%`;
-              statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
-            }, 
-            (error) => {
-              alert('上傳失敗: ' + error.message);
-              progressContainer.style.display = 'none';
-            }, 
-            async () => {
-              // 上傳成功，取得圖片網址
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              this.state.galleryImages = this.state.galleryImages || [];
-              this.state.galleryImages.push({ url, date: this.getNowString() });
-              this.saveState();
-              
-              completedCount++;
-              if (completedCount === files.length) {
-                 statusText.textContent = '全部上傳完成！';
-                 // 停頓 1 秒讓使用者看到完成，然後重新整理畫面顯示新照片
-                 setTimeout(() => {
-                   this.openModal('gallery'); 
-                 }, 1000);
+            uploadTask.on('state_changed', 
+              (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressBar.style.width = `${progress}%`;
+                statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
+                console.log(`[系統紀錄] ${file.name} 進度: ${progress}%`);
+              }, 
+              (error) => {
+                // 這裡會捕捉真正的 Firebase 錯誤
+                console.error('[上傳失敗詳細資訊]:', error);
+                alert(`上傳失敗！\n錯誤代碼：${error.code}\n原因：${error.message}`);
+                progressContainer.style.display = 'none';
+              }, 
+              async () => {
+                try {
+                  const url = await getDownloadURL(uploadTask.snapshot.ref);
+                  this.state.galleryImages = this.state.galleryImages || [];
+                  this.state.galleryImages.push({ url, date: this.getNowString() });
+                  this.saveState();
+                  
+                  completedCount++;
+                  if (completedCount === files.length) {
+                     statusText.textContent = '全部上傳完成！';
+                     setTimeout(() => { this.openModal('gallery'); }, 1000);
+                  }
+                } catch (downloadErr) {
+                  console.error('[取得網址失敗]:', downloadErr);
+                  alert('圖片上傳了，但無法取得顯示網址。');
+                }
               }
-            }
-          );
+            );
+          } catch (initErr) {
+            console.error('[啟動任務失敗]:', initErr);
+            alert('系統錯誤：無法啟動上傳任務');
+          }
         });
       });
     }
