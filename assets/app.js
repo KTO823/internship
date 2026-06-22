@@ -255,6 +255,12 @@ const APP = {
       });
     }
 
+    // 在 setupListeners() 裡面新增這段
+    const btnExportCsv = document.getElementById('export-csv');
+    if (btnExportCsv) {
+      btnExportCsv.addEventListener('click', () => this.exportToCSV());
+    }
+
     const addReminderBtn = document.getElementById('add-reminder');
     if (addReminderBtn) {
       addReminderBtn.addEventListener('click', () => {
@@ -929,6 +935,65 @@ const APP = {
   
   exportData() { 
     const blob = new Blob([JSON.stringify(this.state, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `intern-backup-${this.getTodayStr()}.json`; a.click(); 
+  },
+
+  exportToCSV() {
+    // 1. 加上 BOM (Byte Order Mark)，這是防止 Excel 打開時中文變成亂碼的關鍵！
+    let csvContent = "\uFEFF";
+
+    // ============================
+    // 區塊 A：整理【打卡紀錄】
+    // ============================
+    csvContent += "=== 打卡紀錄 ===\n";
+    csvContent += "日期,上班時間,下班時間,手動登記時數\n"; // 表格標題
+    
+    const punchDates = Object.keys(this.state.punchRecords).sort();
+    if (punchDates.length === 0) {
+      csvContent += "尚無打卡紀錄\n";
+    } else {
+      punchDates.forEach(date => {
+        const day = this.state.punchRecords[date];
+        if (day.manualTotal > 0) {
+          csvContent += `${date},--,--,${day.manualTotal}\n`;
+        } else {
+          day.records.forEach(r => {
+            csvContent += `${date},${r.in},${r.out || '未打卡'},0\n`;
+          });
+        }
+      });
+    }
+
+    csvContent += "\n\n"; // 空兩行，將打卡跟記帳區隔開來
+
+    // ============================
+    // 區塊 B：整理【記帳紀錄】
+    // ============================
+    csvContent += "=== 記帳紀錄 ===\n";
+    csvContent += "紀錄時間,消費項目,金額(日圓)\n"; // 表格標題
+    
+    if (this.state.expenses.length === 0) {
+      csvContent += "尚無記帳紀錄\n";
+    } else {
+      // 依照日期由舊到新排序
+      const sortedExpenses = [...this.state.expenses].sort((a, b) => a.date.localeCompare(b.date));
+      sortedExpenses.forEach(exp => {
+        // 處理項目名稱中如果有「逗號」，需要用雙引號包起來以免破壞 CSV 格式
+        const safeDesc = `"${exp.desc.replace(/"/g, '""')}"`;
+        csvContent += `${exp.date},${safeDesc},${exp.amount}\n`;
+      });
+    }
+
+    // ============================
+    // 區塊 C：打包成檔案並觸發下載
+    // ============================
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `實習報表_${this.getTodayStr()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   },
   
   importData(event) { 
