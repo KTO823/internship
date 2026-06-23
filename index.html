@@ -229,10 +229,13 @@
           </section>
 
           <section class="section" style="margin-bottom: 40px;">
-            <h2>本月明細</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h2 id="expense-list-title" style="margin:0;">本月明細</h2>
+            </div>
             <div class="card" style="padding: 16px;">
-              <div id="monthly-expense-list" style="display: flex; flex-direction: column; gap: 0;">
-                </div>
+              <div id="monthly-expense-list" style="display: flex; flex-direction: column; gap: 0;"></div>
+              
+              <button class="btn secondary" id="btn-manage-expense" style="width: 100%; margin-top: 16px; border-style: dashed;">📂 管理所有歷史明細</button>
             </div>
           </section>
         </div>
