@@ -435,17 +435,17 @@ const APP = {
       this.state.unlockedThemes.push('theme-monochrome');
       msg += '\n\n🎉 達成 14 天簽到！已解鎖主題「簡約黑白」！';
     }
-    if (this.state.checkInCount >= 100 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
+    if (this.state.checkInCount >= 60 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
       this.state.unlockedThemes.push('theme-neon-sakura');
-      msg += '\n\n🎉 達成 100 天簽到！已解鎖主題「夜櫻霓虹」！';
+      msg += '\n\n🎉 達成 60 天簽到！已解鎖主題「夜櫻霓虹」！';
     }
-    if (this.state.checkInCount >= 200 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
+    if (this.state.checkInCount >= 120 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
       this.state.unlockedThemes.push('theme-makie-gold');
-      msg += '\n\n🎉 達成 200 天簽到！已解鎖主題「蒔繪金箔」！';
+      msg += '\n\n🎉 達成 120 天簽到！已解鎖主題「蒔繪金箔」！';
     }
-    if (this.state.checkInCount >= 300 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
+    if (this.state.checkInCount >= 200 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
       this.state.unlockedThemes.push('theme-aurora-stage');
-      msg += '\n\n🎉 達成 300 天簽到！已解鎖主題「幻光星海」！';
+      msg += '\n\n🎉 達成 200 天簽到！已解鎖主題「幻光星海」！';
     }
     
     alert(msg);
@@ -504,9 +504,9 @@ const APP = {
     const themeOptions = [
       { value: 'default', label: '預設標準藍 (原始外觀)' },
       { value: 'theme-monochrome', label: '🔒 14天簽到：簡約黑白' },
-      { value: 'theme-neon-sakura', label: '🔒 100天簽到：夜櫻霓虹' },
-      { value: 'theme-makie-gold', label: '🔒 200天簽到：蒔繪金箔' },
-      { value: 'theme-aurora-stage', label: '🔒 300天簽到：幻光星海' },
+      { value: 'theme-neon-sakura', label: '🔒 60天簽到：夜櫻霓虹' },
+      { value: 'theme-makie-gold', label: '🔒 120天簽到：蒔繪金箔' },
+      { value: 'theme-aurora-stage', label: '🔒 200天簽到：幻光星海' },
       { value: 'theme-shiba-gold', label: '🐾 特殊彩蛋：暖心柴柴版 🐶' },
     ];
     themeOptions.forEach(opt => {

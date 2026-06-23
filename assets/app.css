@@ -506,7 +506,8 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px;
-  background: #fafafa;
+  background: var(--surface); 
+  color: var(--text);  
 }
 
 .history-card p {
@@ -608,7 +609,7 @@ body.theme-monochrome {
   background-image: none;
 }
 
-/* 2. 100天獎勵：夜櫻霓虹 (調暗底色，降低粉色飽和度，變成有質感的暗粉紫) */
+/* 2. 60天獎勵：夜櫻霓虹 (調暗底色，降低粉色飽和度，變成有質感的暗粉紫) */
 body.theme-neon-sakura {
   --primary: #d87093; /* 柔和的莫蘭迪暗粉 */
   --primary-light: rgba(216, 112, 147, 0.15);
@@ -619,7 +620,7 @@ body.theme-neon-sakura {
   background-image: none;
 }
 
-/* 3. 200天獎勵：蒔繪金箔 (終極顯色版：加強金線濃度與質感) */
+/* 3. 120天獎勵：蒔繪金箔 (終極顯色版：加強金線濃度與質感) */
 body.theme-makie-gold {
   --primary: #c5a059; 
   --primary-light: rgba(197, 160, 89, 0.15);
@@ -637,7 +638,7 @@ body.theme-makie-gold {
   background-size: 100% 100%, 40px 40px, 40px 40px !important;
 }
 
-/* 4. 300天獎勵：幻光星海 (提升活力與亮度，找回星空的魔力) */
+/* 4. 200天獎勵：幻光星海 (提升活力與亮度，找回星空的魔力) */
 body.theme-aurora-stage {
   --primary: #00b4d8; /* 充滿活力的星際青藍，不會太螢光但很有精神 */
   --primary-light: rgba(0, 180, 216, 0.15);
@@ -725,15 +726,15 @@ body.theme-aurora-stage ::-webkit-calendar-picker-indicator {
 body.theme-monochrome .icon-settings::before { content: '⚿'; }
 body.theme-monochrome .icon-checkin::before { content: '✓'; }
 
-/* --- 3. 100天獎勵：夜櫻霓虹的圖示 (滿滿櫻花感) --- */
+/* --- 3. 60天獎勵：夜櫻霓虹的圖示 (滿滿櫻花感) --- */
 body.theme-neon-sakura .icon-settings::before { content: '🌸'; }
 body.theme-neon-sakura .icon-checkin::before { content: '🍡'; }
 
-/* --- 4. 200天獎勵：蒔繪金箔的圖示 (日系奢華風) --- */
+/* --- 4. 120天獎勵：蒔繪金箔的圖示 (日系奢華風) --- */
 body.theme-makie-gold .icon-settings::before { content: '🔱'; }
 body.theme-makie-gold .icon-checkin::before { content: '🖋️'; }
 
-/* --- 5. 300天獎勵：幻光星海的圖示 (宇宙科幻感) --- */
+/* --- 5. 200天獎勵：幻光星海的圖示 (宇宙科幻感) --- */
 body.theme-aurora-stage .icon-settings::before { content: '🪐'; }
 body.theme-aurora-stage .icon-checkin::before { content: '⭐'; }
 
