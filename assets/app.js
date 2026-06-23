@@ -35,7 +35,7 @@ const APP = {
     expenses: [],
     notes: [],
     journals: [],
-    galleryImages: [], // 相簿陣列
+    galleryImages: [], 
     checkInCount: 0,
     lastCheckInDate: '',
     checkInHistory: [], 
@@ -132,6 +132,7 @@ const APP = {
       manualSubmit: document.getElementById('manual-hours-submit'),
       todayPunchList: document.getElementById('today-punch-list'),
       
+      expDate: document.getElementById('expense-date'), // 新增抓取日期欄位
       expDesc: document.getElementById('expense-custom-desc'),
       expAmount: document.getElementById('expense-custom'),
       expAdd: document.getElementById('expense-add'),
@@ -209,10 +210,13 @@ const APP = {
       this.dom.expAdd.addEventListener('click', () => {
         const amount = Number(this.dom.expAmount.value);
         const desc = this.dom.expDesc.value.trim() || '自訂支出';
+        const customDate = this.dom.expDate ? this.dom.expDate.value : this.getTodayStr(); // 抓取自訂日期
+        
         if (amount > 0) { 
-          this.addExpenseRecord(desc, amount); 
+          this.addExpenseRecord(desc, amount, customDate); 
           this.dom.expAmount.value = ''; 
           this.dom.expDesc.value = ''; 
+          if (this.dom.expDate) this.dom.expDate.value = this.getTodayStr(); // 記帳完自動跳回今天
         }
       });
     }
@@ -255,7 +259,6 @@ const APP = {
       });
     }
 
-    // 在 setupListeners() 裡面新增這段
     const btnExportCsv = document.getElementById('export-csv');
     if (btnExportCsv) {
       btnExportCsv.addEventListener('click', () => this.exportToCSV());
@@ -270,7 +273,6 @@ const APP = {
       });
     }
 
-    // Modal 綁定
     const bindModal = (btnId, type) => {
       const btn = document.getElementById(btnId);
       if (btn) btn.addEventListener('click', () => this.openModal(type));
@@ -283,7 +285,6 @@ const APP = {
     bindModal('btn-manage-journal', 'journal');
     bindModal('btn-view-checkin-history', 'checkInHistory');
     
-    // 綁定相簿按鈕
     const btnOpenGallery = document.getElementById('btn-open-gallery');
     if (btnOpenGallery) {
       btnOpenGallery.addEventListener('click', () => this.openModal('gallery'));
@@ -367,17 +368,18 @@ const APP = {
     this.renderExpenses();
   },
 
-  addExpenseRecord(desc, amount) {
-    const today = this.getTodayStr();
-    const currentIsoMonth = today.slice(0, 7);
+  // 接收自訂日期，如果沒有則給今天
+  addExpenseRecord(desc, amount, customDate = null) {
+    const targetDate = customDate || this.getTodayStr();
+    const currentIsoMonth = targetDate.slice(0, 7);
     this.state.expenses.push({ 
       id: Date.now(), 
       desc, 
       amount, 
-      date: this.getNowString(),
+      date: targetDate, // 儲存選取的日期
       isoMonth: currentIsoMonth
     });
-    this.state.currentExpenseMonth = currentIsoMonth;
+    this.state.currentExpenseMonth = currentIsoMonth; // 記完跳到該月
     this.saveState(); 
     this.renderExpenses();
   },
@@ -475,6 +477,11 @@ const APP = {
     if (this.dom.settingsStart) this.dom.settingsStart.value = this.state.startDate;
     if (this.dom.settingsEnd) this.dom.settingsEnd.value = this.state.endDate;
     
+    // 如果日期框空空如也，給它預設今天
+    if (this.dom.expDate && !this.dom.expDate.value) {
+      this.dom.expDate.value = this.getTodayStr();
+    }
+
     this.renderHoursPage();
     this.renderExpenses();
     this.renderReminders();
@@ -559,15 +566,45 @@ const APP = {
     if (document.getElementById('expense-ntd')) document.getElementById('expense-ntd').textContent = `NT$${totalNtd}`;
     if (document.getElementById('progress-expense-text')) document.getElementById('progress-expense-text').textContent = `￥${totalJpy} / NT$${totalNtd}`;
 
+    // 重新渲染快捷按鈕，確保快速按鈕也會帶上自訂日期
     if (this.dom.expQuickBox) {
       this.dom.expQuickBox.innerHTML = '';
       this.state.quickExpenses.forEach(q => {
         const btn = document.createElement('button'); 
         btn.className = 'btn-expense';
         btn.textContent = `${q.label} ￥${q.amount}`;
-        btn.addEventListener('click', () => this.addExpenseRecord(q.label, q.amount));
+        btn.addEventListener('click', () => {
+          const d = this.dom.expDate ? this.dom.expDate.value : this.getTodayStr();
+          this.addExpenseRecord(q.label, q.amount, d);
+        });
         this.dom.expQuickBox.appendChild(btn);
       });
+    }
+
+    // ⬇️ 核心修復：渲染【本月明細】清單
+    if (this.dom.monthlyExpenseList) {
+      this.dom.monthlyExpenseList.innerHTML = '';
+      if (monthlyData.length === 0) {
+        this.dom.monthlyExpenseList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding:10px 0;">本月尚無明細</p>';
+      } else {
+        // 從新到舊排序顯示
+        const sorted = [...monthlyData].sort((a,b) => b.date.localeCompare(a.date));
+        sorted.forEach((e) => {
+          const div = document.createElement('div');
+          div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border);';
+          div.innerHTML = `
+            <div>
+              <div style="font-weight:600; font-size:0.95rem;">${escapeHtml(e.desc)}</div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">${e.date}</div>
+            </div>
+            <div style="font-weight:700; color:var(--text);">￥${e.amount}</div>
+          `;
+          this.dom.monthlyExpenseList.appendChild(div);
+        });
+        if (this.dom.monthlyExpenseList.lastChild) {
+            this.dom.monthlyExpenseList.lastChild.style.borderBottom = 'none';
+        }
+      }
     }
   },
 
@@ -693,10 +730,9 @@ const APP = {
         const headerDiv = document.createElement('div');
         headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 4px;';
         
-        // 優化：改用優雅的單線箭頭，並強制圓形置中
         const btnPrev = document.createElement('button'); 
         btnPrev.className = 'btn-icon'; 
-        btnPrev.innerHTML = '&#10094;'; // ❮
+        btnPrev.innerHTML = '&#10094;'; 
         btnPrev.style.cssText = 'font-size: 1rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;'; 
         btnPrev.onclick = () => { currentViewDate.setMonth(month - 1); renderCalendar(); };
         
@@ -704,10 +740,9 @@ const APP = {
         titleSpan.style.cssText = 'font-weight: 700; font-size: 1.15rem; color: var(--text); letter-spacing: 1px;'; 
         titleSpan.textContent = `${year}年 ${month + 1}月`;
         
-        // 優化：改用優雅的單線箭頭
         const btnNext = document.createElement('button'); 
         btnNext.className = 'btn-icon'; 
-        btnNext.innerHTML = '&#10095;'; // ❯
+        btnNext.innerHTML = '&#10095;'; 
         btnNext.style.cssText = 'font-size: 1rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;'; 
         btnNext.onclick = () => { currentViewDate.setMonth(month + 1); renderCalendar(); };
         
@@ -717,7 +752,6 @@ const APP = {
         this.dom.modalBody.appendChild(headerDiv);
         
         const grid = document.createElement('div');
-        // 優化：加入 minmax(0, 1fr) 避免手機版被撐破，並縮小 gap
         grid.style.cssText = 'display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; width: 100%; box-sizing: border-box;';
         
         const days = ['日', '一', '二', '三', '四', '五', '六'];
@@ -739,9 +773,7 @@ const APP = {
           const hasCheckedIn = historySet.has(dateStr);
           const isToday = dateStr === this.getTodayStr();
           
-          // 優化：加入 box-sizing 與調整 padding 確保手機完美正方形
           dateDiv.style.cssText = `aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid ${isToday ? 'var(--primary)' : 'var(--border)'}; background: ${hasCheckedIn ? 'var(--primary-light)' : 'transparent'}; color: ${hasCheckedIn ? 'var(--primary)' : 'var(--text)'}; font-weight: ${hasCheckedIn || isToday ? '600' : 'normal'}; font-size: 0.9rem; padding: 2px; box-sizing: border-box;`;
-          
           dateDiv.innerHTML = `<span style="line-height: 1;">${i}</span><span style="font-size: 0.7rem; height: 12px; margin-top: 2px;">${hasCheckedIn ? '<span class="dynamic-icon icon-checkin"></span>' : ''}</span>`;
           grid.appendChild(dateDiv);
         }
@@ -798,7 +830,6 @@ const APP = {
         <div style="margin-bottom: 20px; display:flex; gap: 10px;">
             <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
             <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
-            <button class="btn secondary" id="export-gallery">匯出相簿</button>
         </div>
         <div id="upload-progress-container" style="display:none; margin-bottom: 20px;">
             <div class="progress-bar" style="background: rgba(0,0,0,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
@@ -846,7 +877,6 @@ const APP = {
 
         Array.from(files).forEach((file, index) => {
           try {
-            console.log(`開始準備上傳檔案: ${file.name}`);
             const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -855,11 +885,8 @@ const APP = {
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                 progressBar.style.width = `${progress}%`;
                 statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
-                console.log(`[系統紀錄] ${file.name} 進度: ${progress}%`);
               }, 
               (error) => {
-                // 這裡會捕捉真正的 Firebase 錯誤
-                console.error('[上傳失敗詳細資訊]:', error);
                 alert(`上傳失敗！\n錯誤代碼：${error.code}\n原因：${error.message}`);
                 progressContainer.style.display = 'none';
               }, 
@@ -876,13 +903,11 @@ const APP = {
                      setTimeout(() => { this.openModal('gallery'); }, 1000);
                   }
                 } catch (downloadErr) {
-                  console.error('[取得網址失敗]:', downloadErr);
                   alert('圖片上傳了，但無法取得顯示網址。');
                 }
               }
             );
           } catch (initErr) {
-            console.error('[啟動任務失敗]:', initErr);
             alert('系統錯誤：無法啟動上傳任務');
           }
         });
@@ -938,59 +963,30 @@ const APP = {
   },
 
   exportToCSV() {
-    // 1. 加上 BOM (Byte Order Mark)，這是防止 Excel 打開時中文變成亂碼的關鍵！
     let csvContent = "\uFEFF";
-
-    // ============================
-    // 區塊 A：整理【打卡紀錄】
-    // ============================
-    csvContent += "=== 打卡紀錄 ===\n";
-    csvContent += "日期,上班時間,下班時間,手動登記時數\n"; // 表格標題
-    
+    csvContent += "=== 打卡紀錄 ===\n日期,上班時間,下班時間,手動登記時數\n"; 
     const punchDates = Object.keys(this.state.punchRecords).sort();
-    if (punchDates.length === 0) {
-      csvContent += "尚無打卡紀錄\n";
-    } else {
+    if (punchDates.length === 0) csvContent += "尚無打卡紀錄\n";
+    else {
       punchDates.forEach(date => {
         const day = this.state.punchRecords[date];
-        if (day.manualTotal > 0) {
-          csvContent += `${date},--,--,${day.manualTotal}\n`;
-        } else {
-          day.records.forEach(r => {
-            csvContent += `${date},${r.in},${r.out || '未打卡'},0\n`;
-          });
-        }
+        if (day.manualTotal > 0) csvContent += `${date},--,--,${day.manualTotal}\n`;
+        else day.records.forEach(r => csvContent += `${date},${r.in},${r.out || '未打卡'},0\n`);
       });
     }
-
-    csvContent += "\n\n"; // 空兩行，將打卡跟記帳區隔開來
-
-    // ============================
-    // 區塊 B：整理【記帳紀錄】
-    // ============================
-    csvContent += "=== 記帳紀錄 ===\n";
-    csvContent += "紀錄時間,消費項目,金額(日圓)\n"; // 表格標題
-    
-    if (this.state.expenses.length === 0) {
-      csvContent += "尚無記帳紀錄\n";
-    } else {
-      // 依照日期由舊到新排序
+    csvContent += "\n\n=== 記帳紀錄 ===\n紀錄時間,消費項目,金額(日圓)\n"; 
+    if (this.state.expenses.length === 0) csvContent += "尚無記帳紀錄\n";
+    else {
       const sortedExpenses = [...this.state.expenses].sort((a, b) => a.date.localeCompare(b.date));
       sortedExpenses.forEach(exp => {
-        // 處理項目名稱中如果有「逗號」，需要用雙引號包起來以免破壞 CSV 格式
         const safeDesc = `"${exp.desc.replace(/"/g, '""')}"`;
         csvContent += `${exp.date},${safeDesc},${exp.amount}\n`;
       });
     }
-
-    // ============================
-    // 區塊 C：打包成檔案並觸發下載
-    // ============================
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `實習報表_${this.getTodayStr()}.csv`);
+    link.href = URL.createObjectURL(blob);
+    link.download = `實習報表_${this.getTodayStr()}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
