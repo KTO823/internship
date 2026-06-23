@@ -581,68 +581,42 @@ const APP = {
       });
     }
 
-    // ⬇️ 核心升級：渲染【所有記帳明細】(改為可摺疊、依月份分類、含刪除鍵)
+    // ⬇️ 渲染主頁清單：只顯示「目前選中月份」的明細，並連動標題
     if (this.dom.monthlyExpenseList) {
       this.dom.monthlyExpenseList.innerHTML = '';
       
-      if (this.state.expenses.length === 0) {
-        this.dom.monthlyExpenseList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding:10px 0;">尚無記帳紀錄</p>';
+      const listTitle = document.getElementById('expense-list-title');
+      if (listTitle && this.state.currentExpenseMonth) {
+        const [y, m] = this.state.currentExpenseMonth.split('-');
+        listTitle.textContent = `${parseInt(m)}月明細`;
+      }
+
+      if (monthlyData.length === 0) {
+        this.dom.monthlyExpenseList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding:10px 0;">本月尚無明細</p>';
       } else {
-        // 1. 保留原始陣列的索引 (為了刪除功能能對應到正確的資料)
-        const allExps = this.state.expenses.map((e, idx) => ({ ...e, _originalIdx: idx }));
-        
-        // 2. 依照月份 (YYYY-MM) 進行分組
-        const grouped = {};
-        allExps.forEach(e => {
-          const month = e.isoMonth || e.date.substring(0, 7); 
-          if (!grouped[month]) grouped[month] = [];
-          grouped[month].push(e);
+        // 從新到舊排序
+        const sorted = [...monthlyData].sort((a,b) => b.date.localeCompare(a.date));
+        sorted.forEach((e) => {
+          // 找出這筆資料在原始 expenses 陣列中的「真實索引」，確保刪除時不會刪錯人
+          const trueIdx = this.state.expenses.indexOf(e);
+          
+          const div = document.createElement('div');
+          div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border);';
+          div.innerHTML = `
+            <div style="flex: 1;">
+              <div style="font-weight:600; font-size:0.95rem;">${escapeHtml(e.desc)}</div>
+              <div style="font-size:0.8rem; color:var(--text-muted);">${e.date}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="font-weight:700; color:var(--text);">￥${e.amount}</div>
+              <button class="btn-icon" style="color:#ff4444; font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('expenses', ${trueIdx})">🗑️</button>
+            </div>
+          `;
+          this.dom.monthlyExpenseList.appendChild(div);
         });
-
-        // 3. 取出所有月份，並由新到舊排序
-        const sortedMonths = Object.keys(grouped).sort().reverse();
-
-        sortedMonths.forEach((month, index) => {
-          // 建立可摺疊的 details 標籤
-          const details = document.createElement('details');
-          // 預設將「第一個月(最新)」展開
-          if (index === 0) details.open = true; 
-          details.style.marginBottom = '12px';
-          
-          // 建立摺疊標題 summary
-          const summary = document.createElement('summary');
-          const [y, m] = month.split('-');
-          summary.style.cssText = 'font-size: 1.05rem; font-weight: 600; padding: 12px 16px; background: var(--primary-light); color: var(--primary); border-radius: 8px; cursor: pointer; outline: none; margin-bottom: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;';
-          summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ 點擊展開/收起</span>`;
-          details.appendChild(summary);
-          
-          // 建立該月份的內容區塊
-          const content = document.createElement('div');
-          content.style.cssText = 'display: flex; flex-direction: column; gap: 8px; padding: 0 4px 8px 4px;';
-          
-          // 將該月份內的明細由新到舊排序
-          grouped[month].sort((a,b) => b.date.localeCompare(a.date)).forEach(e => {
-            const div = document.createElement('div');
-            // 加入卡片般的樣式與底線
-            div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; border-radius: 8px; background: var(--card-bg); border: 1px solid var(--border);';
-            
-            // 左邊顯示品項與日期，右邊顯示金額與刪除按鈕
-            div.innerHTML = `
-              <div style="flex: 1;">
-                <div style="font-weight:600; font-size:0.95rem; color: var(--text);">${escapeHtml(e.desc)}</div>
-                <div style="font-size:0.8rem; color:var(--text-muted); margin-top: 4px;">${e.date}</div>
-              </div>
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="font-weight:700; color:var(--text); font-size: 1.1rem;">￥${e.amount}</div>
-                <button class="btn-icon" style="color:#ff4444; font-size:1.2rem; cursor:pointer;" onclick="APP.deleteItem('expenses', ${e._originalIdx})">🗑️</button>
-              </div>
-            `;
-            content.appendChild(div);
-          });
-          
-          details.appendChild(content);
-          this.dom.monthlyExpenseList.appendChild(details);
-        });
+        if (this.dom.monthlyExpenseList.lastChild) {
+            this.dom.monthlyExpenseList.lastChild.style.borderBottom = 'none';
+        }
       }
     }
   },
