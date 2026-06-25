@@ -587,7 +587,6 @@ const APP = {
             html += `
               <div class="expense-item">
                 <div style="display:flex; align-items:center;">
-                  <div class="exp-icon">🍽️</div>
                   <div style="font-weight:600; font-size:1rem; color:var(--text);">${escapeHtml(e.desc)}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">

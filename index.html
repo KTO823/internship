@@ -187,12 +187,12 @@
         </div>
 
         <div class="page-content">
-
           <div class="card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 16px;">
             <button class="btn-icon" id="btn-prev-month" style="font-size: 1.2rem; padding: 8px 16px; background: var(--primary-light); border-radius: 8px; color: var(--primary);">◀</button>
             <strong id="current-month-display" style="font-size: 1.2rem;">載入中...</strong>
             <button class="btn-icon" id="btn-next-month" style="font-size: 1.2rem; padding: 8px 16px; background: var(--primary-light); border-radius: 8px; color: var(--primary);">▶</button>
           </div>
+          
           <div class="card" style="margin-bottom: 24px;">
             <h2 style="margin-top: 0; text-align: center; color: var(--text-muted); font-size: 0.95rem;">本月總支出</h2>
             <div class="expense-display">
@@ -207,10 +207,12 @@
               </div>
             </div>
           </div>
+          
           <div id="monthly-expense-list" style="padding-bottom: 80px;"></div>
         </div>
+        
         <button id="btn-fab-add-expense" class="fab-btn">＋</button>
-      </div> <div class="page" id="page-notes" data-page="notes">
+      </div> 
         
       <div class="page" id="page-notes" data-page="notes">
         <div class="page-header">
@@ -341,7 +343,6 @@
             <h2>資料備份與還原</h2>
             <div class="card" style="display: grid; gap: 12px;">
               <button class="btn" id="export-csv" style="background-color: #107c41; color: white; border-color: #107c41;">📊 下載實習報表 (Excel)</button>
-              
               <button class="btn secondary" id="data-export">匯出完整備份 (JSON)</button>
               <button class="btn secondary" id="data-import">匯入備份 (JSON)</button>
               <input type="file" id="import-file" accept=".json" style="display:none">
