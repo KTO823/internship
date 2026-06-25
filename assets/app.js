@@ -132,15 +132,12 @@ const APP = {
       manualSubmit: document.getElementById('manual-hours-submit'),
       todayPunchList: document.getElementById('today-punch-list'),
       
-      expDate: document.getElementById('expense-date'), // 新增抓取日期欄位
-      expDesc: document.getElementById('expense-custom-desc'),
-      expAmount: document.getElementById('expense-custom'),
-      expAdd: document.getElementById('expense-add'),
-      expQuickBox: document.getElementById('expense-quick-buttons'),
       btnPrevMonth: document.getElementById('btn-prev-month'),
       btnNextMonth: document.getElementById('btn-next-month'),
       monthDisplay: document.getElementById('current-month-display'),
       monthlyExpenseList: document.getElementById('monthly-expense-list'),
+      
+      fabAddExpense: document.getElementById('btn-fab-add-expense'), // 新增：懸浮按鈕
       
       themeSelect: document.getElementById('settings-theme-select'),
       historyCheckinCount: document.getElementById('history-checkin-count'),
@@ -206,18 +203,10 @@ const APP = {
     if (this.dom.btnPrevMonth) this.dom.btnPrevMonth.addEventListener('click', () => this.changeExpenseMonth(-1));
     if (this.dom.btnNextMonth) this.dom.btnNextMonth.addEventListener('click', () => this.changeExpenseMonth(1));
 
-    if (this.dom.expAdd) {
-      this.dom.expAdd.addEventListener('click', () => {
-        const amount = Number(this.dom.expAmount.value);
-        const desc = this.dom.expDesc.value.trim() || '自訂支出';
-        const customDate = this.dom.expDate ? this.dom.expDate.value : this.getTodayStr(); // 抓取自訂日期
-        
-        if (amount > 0) { 
-          this.addExpenseRecord(desc, amount, customDate); 
-          this.dom.expAmount.value = ''; 
-          this.dom.expDesc.value = ''; 
-          if (this.dom.expDate) this.dom.expDate.value = this.getTodayStr(); // 記帳完自動跳回今天
-        }
+    // ⬇️ 綁定懸浮按鈕：開啟記帳選單
+    if (this.dom.fabAddExpense) {
+      this.dom.fabAddExpense.addEventListener('click', () => {
+        this.openModal('addExpense');
       });
     }
 
@@ -280,7 +269,6 @@ const APP = {
     
     bindModal('btn-manage-punch', 'punch');
     bindModal('btn-manage-expense', 'expense');
-    bindModal('btn-edit-quick-expense', 'quickExpense');
     bindModal('btn-manage-note', 'note');
     bindModal('btn-manage-journal', 'journal');
     bindModal('btn-view-checkin-history', 'checkInHistory');
@@ -368,7 +356,6 @@ const APP = {
     this.renderExpenses();
   },
 
-  // 接收自訂日期，如果沒有則給今天
   addExpenseRecord(desc, amount, customDate = null) {
     const targetDate = customDate || this.getTodayStr();
     const currentIsoMonth = targetDate.slice(0, 7);
@@ -376,10 +363,10 @@ const APP = {
       id: Date.now(), 
       desc, 
       amount, 
-      date: targetDate, // 儲存選取的日期
+      date: targetDate, 
       isoMonth: currentIsoMonth
     });
-    this.state.currentExpenseMonth = currentIsoMonth; // 記完跳到該月
+    this.state.currentExpenseMonth = currentIsoMonth; 
     this.saveState(); 
     this.renderExpenses();
   },
@@ -435,17 +422,17 @@ const APP = {
       this.state.unlockedThemes.push('theme-monochrome');
       msg += '\n\n🎉 達成 14 天簽到！已解鎖主題「簡約黑白」！';
     }
-    if (this.state.checkInCount >= 60 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
+    if (this.state.checkInCount >= 100 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
       this.state.unlockedThemes.push('theme-neon-sakura');
-      msg += '\n\n🎉 達成 60 天簽到！已解鎖主題「夜櫻霓虹」！';
+      msg += '\n\n🎉 達成 100 天簽到！已解鎖主題「夜櫻霓虹」！';
     }
-    if (this.state.checkInCount >= 120 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
+    if (this.state.checkInCount >= 200 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
       this.state.unlockedThemes.push('theme-makie-gold');
-      msg += '\n\n🎉 達成 120 天簽到！已解鎖主題「蒔繪金箔」！';
+      msg += '\n\n🎉 達成 200 天簽到！已解鎖主題「蒔繪金箔」！';
     }
-    if (this.state.checkInCount >= 200 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
+    if (this.state.checkInCount >= 300 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
       this.state.unlockedThemes.push('theme-aurora-stage');
-      msg += '\n\n🎉 達成 200 天簽到！已解鎖主題「幻光星海」！';
+      msg += '\n\n🎉 達成 300 天簽到！已解鎖主題「幻光星海」！';
     }
     
     alert(msg);
@@ -476,11 +463,6 @@ const APP = {
     if (this.dom.settingsHoursTarget) this.dom.settingsHoursTarget.value = this.state.hoursTarget;
     if (this.dom.settingsStart) this.dom.settingsStart.value = this.state.startDate;
     if (this.dom.settingsEnd) this.dom.settingsEnd.value = this.state.endDate;
-    
-    // 如果日期框空空如也，給它預設今天
-    if (this.dom.expDate && !this.dom.expDate.value) {
-      this.dom.expDate.value = this.getTodayStr();
-    }
 
     this.renderHoursPage();
     this.renderExpenses();
@@ -504,9 +486,9 @@ const APP = {
     const themeOptions = [
       { value: 'default', label: '預設標準藍 (原始外觀)' },
       { value: 'theme-monochrome', label: '🔒 14天簽到：簡約黑白' },
-      { value: 'theme-neon-sakura', label: '🔒 60天簽到：夜櫻霓虹' },
-      { value: 'theme-makie-gold', label: '🔒 120天簽到：蒔繪金箔' },
-      { value: 'theme-aurora-stage', label: '🔒 200天簽到：幻光星海' },
+      { value: 'theme-neon-sakura', label: '🔒 100天簽到：夜櫻霓虹' },
+      { value: 'theme-makie-gold', label: '🔒 200天簽到：蒔繪金箔' },
+      { value: 'theme-aurora-stage', label: '🔒 300天簽到：幻光星海' },
       { value: 'theme-shiba-gold', label: '🐾 特殊彩蛋：暖心柴柴版 🐶' },
     ];
     themeOptions.forEach(opt => {
@@ -564,59 +546,61 @@ const APP = {
     
     if (document.getElementById('expense-jpy')) document.getElementById('expense-jpy').textContent = `￥${totalJpy}`;
     if (document.getElementById('expense-ntd')) document.getElementById('expense-ntd').textContent = `NT$${totalNtd}`;
-    if (document.getElementById('progress-expense-text')) document.getElementById('progress-expense-text').textContent = `￥${totalJpy} / NT$${totalNtd}`;
 
-    // 重新渲染快捷按鈕，確保快速按鈕也會帶上自訂日期
-    if (this.dom.expQuickBox) {
-      this.dom.expQuickBox.innerHTML = '';
-      this.state.quickExpenses.forEach(q => {
-        const btn = document.createElement('button'); 
-        btn.className = 'btn-expense';
-        btn.textContent = `${q.label} ￥${q.amount}`;
-        btn.addEventListener('click', () => {
-          const d = this.dom.expDate ? this.dom.expDate.value : this.getTodayStr();
-          this.addExpenseRecord(q.label, q.amount, d);
-        });
-        this.dom.expQuickBox.appendChild(btn);
-      });
-    }
-
-    // ⬇️ 渲染主頁清單：只顯示「目前選中月份」的明細，並連動標題
+    // ⬇️ 核心升級：將明細依照「日期」打包成精美卡片
     if (this.dom.monthlyExpenseList) {
       this.dom.monthlyExpenseList.innerHTML = '';
       
-      const listTitle = document.getElementById('expense-list-title');
-      if (listTitle && this.state.currentExpenseMonth) {
-        const [y, m] = this.state.currentExpenseMonth.split('-');
-        listTitle.textContent = `${parseInt(m)}月明細`;
-      }
-
       if (monthlyData.length === 0) {
-        this.dom.monthlyExpenseList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding:10px 0;">本月尚無明細</p>';
+        this.dom.monthlyExpenseList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding:20px 0;">本月尚無明細</p>';
       } else {
-        // 從新到舊排序
-        const sorted = [...monthlyData].sort((a,b) => b.date.localeCompare(a.date));
-        sorted.forEach((e) => {
-          // 找出這筆資料在原始 expenses 陣列中的「真實索引」，確保刪除時不會刪錯人
-          const trueIdx = this.state.expenses.indexOf(e);
+        // 先將當月資料依據具體日期 (e.date) 進行分組
+        const groupedByDate = {};
+        monthlyData.forEach(e => {
+          if (!groupedByDate[e.date]) groupedByDate[e.date] = [];
+          groupedByDate[e.date].push(e);
+        });
+
+        // 取出所有日期並由新到舊排序
+        const sortedDates = Object.keys(groupedByDate).sort().reverse();
+
+        sortedDates.forEach(dateStr => {
+          const d = new Date(dateStr);
+          const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+          const weekdayStr = isNaN(d.getTime()) ? '' : weekdays[d.getDay()];
+          const dayTotal = groupedByDate[dateStr].reduce((sum, item) => sum + item.amount, 0);
+
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'expense-day-group';
           
-          const div = document.createElement('div');
-          div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border);';
-          div.innerHTML = `
-            <div style="flex: 1;">
-              <div style="font-weight:600; font-size:0.95rem;">${escapeHtml(e.desc)}</div>
-              <div style="font-size:0.8rem; color:var(--text-muted);">${e.date}</div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="font-weight:700; color:var(--text);">￥${e.amount}</div>
-              <button class="btn-icon" style="color:#ff4444; font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('expenses', ${trueIdx})">🗑️</button>
+          // 卡片頂部的日期與單日總計
+          let html = `
+            <div class="expense-day-header">
+                <span>${dateStr} ${weekdayStr}</span>
+                <span class="expense-day-total">￥-${dayTotal}</span>
             </div>
           `;
-          this.dom.monthlyExpenseList.appendChild(div);
+          
+          // 卡片內部的品項清單
+          groupedByDate[dateStr].forEach(e => {
+            const trueIdx = this.state.expenses.indexOf(e); // 抓取真實索引供刪除用
+            html += `
+              <div class="expense-item">
+                <div style="display:flex; align-items:center;">
+                  <div class="exp-icon">🍽️</div>
+                  <div style="font-weight:600; font-size:1rem; color:var(--text);">${escapeHtml(e.desc)}</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div style="font-weight:700; font-size:1rem; color:var(--text);">￥-${e.amount}</div>
+                  <button class="btn-icon" style="color:#ff4444; font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('expenses', ${trueIdx})">🗑️</button>
+                </div>
+              </div>
+            `;
+          });
+          
+          groupDiv.innerHTML = html;
+          this.dom.monthlyExpenseList.appendChild(groupDiv);
         });
-        if (this.dom.monthlyExpenseList.lastChild) {
-            this.dom.monthlyExpenseList.lastChild.style.borderBottom = 'none';
-        }
       }
     }
   },
@@ -732,7 +716,55 @@ const APP = {
       return isNaN(d.getTime()) ? '未分類' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     };
 
-    if (type === 'checkInHistory') {
+    // ⬇️ 處理點擊 FAB 跳出的「新增記帳」彈窗
+    if (type === 'addExpense') {
+      this.dom.modalTitle.textContent = '新增記帳';
+      this.dom.modalBody.innerHTML = `
+        <div class="input-group" style="margin-bottom: 24px;">
+          <label style="font-weight:600; font-size:0.9rem; color:var(--text-muted);">📅 選擇日期</label>
+          <input type="date" id="modal-exp-date" value="${this.getTodayStr()}">
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="margin: 0; font-size: 1rem;">⚡ 快速記帳</h3>
+          <button class="btn-icon" onclick="APP.openModal('quickExpense')" style="font-size:0.8rem; color:var(--primary);">編輯快捷鍵 ⚙️</button>
+        </div>
+        <div class="expense-buttons" id="modal-quick-box" style="margin-bottom: 32px;"></div>
+        
+        <h3 style="margin: 0 0 12px; font-size: 1rem;">✍️ 自訂輸入</h3>
+        <div class="input-group">
+          <input type="text" id="modal-exp-desc" placeholder="買了什麼？ (例如: 午餐)">
+          <input type="number" id="modal-exp-amount" placeholder="輸入日幣金額" min="0" step="10">
+          <button class="btn" id="modal-exp-add" style="background: #f67280; color: white;">確認記帳</button>
+        </div>
+      `;
+
+      // 渲染裡面的快速按鈕
+      const quickBox = document.getElementById('modal-quick-box');
+      this.state.quickExpenses.forEach(q => {
+        const btn = document.createElement('button'); 
+        btn.className = 'btn-expense';
+        btn.textContent = `${q.label} ￥${q.amount}`;
+        btn.onclick = () => {
+          const d = document.getElementById('modal-exp-date').value || this.getTodayStr();
+          this.addExpenseRecord(q.label, q.amount, d);
+          this.dom.modal.classList.remove('active'); // 自動關閉視窗
+        };
+        quickBox.appendChild(btn);
+      });
+
+      // 綁定自訂輸入按鈕
+      document.getElementById('modal-exp-add').onclick = () => {
+        const desc = document.getElementById('modal-exp-desc').value.trim() || '自訂支出';
+        const amt = Number(document.getElementById('modal-exp-amount').value);
+        const d = document.getElementById('modal-exp-date').value || this.getTodayStr();
+        if (amt > 0) {
+          this.addExpenseRecord(desc, amt, d);
+          this.dom.modal.classList.remove('active'); // 自動關閉視窗
+        }
+      };
+
+    } else if (type === 'checkInHistory') {
       this.dom.modalTitle.textContent = '📅 歷史簽到月曆';
       let currentViewDate = new Date(); 
       const renderCalendar = () => {
@@ -807,15 +839,6 @@ const APP = {
         div.innerHTML = html; return div;
       });
 
-    } else if (type === 'expense') {
-      this.dom.modalTitle.textContent = '記帳明細歷史 (依月份分類)';
-      const exps = this.state.expenses.map((e, idx) => ({ ...e, _idx: idx }));
-      renderGrouped(exps, item => item.isoMonth || getMonthFromId(item.id), (e) => {
-        const div = document.createElement('div'); div.className = 'history-card';
-        div.innerHTML = `<p style="color:gray; font-size:0.8rem;">${e.date}</p><p><strong>${escapeHtml(e.desc)}</strong>：￥${e.amount}</p><div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('expenses', ${e._idx}, 'expense')">刪除</button></div>`;
-        return div;
-      });
-
     } else if (type === 'quickExpense') {
       this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
       this.state.quickExpenses.forEach((q, idx) => {
@@ -843,6 +866,7 @@ const APP = {
         <div style="margin-bottom: 20px; display:flex; gap: 10px;">
             <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
             <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
+            <button class="btn secondary" id="export-gallery">匯出相簿</button>
         </div>
         <div id="upload-progress-container" style="display:none; margin-bottom: 20px;">
             <div class="progress-bar" style="background: rgba(0,0,0,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
@@ -853,7 +877,6 @@ const APP = {
         <div class="masonry-grid" id="modal-gallery-grid" style="column-count: 2; column-gap: 15px;"></div>
       `;
 
-      // 渲染已有照片
       const grid = document.getElementById('modal-gallery-grid');
       const images = this.state.galleryImages || [];
       if (images.length === 0) {
@@ -871,7 +894,6 @@ const APP = {
         });
       }
 
-      // 綁定上傳
       document.getElementById('image-upload').addEventListener('change', (e) => {
         const files = e.target.files;
         if (files.length === 0) return;
@@ -890,6 +912,7 @@ const APP = {
 
         Array.from(files).forEach((file, index) => {
           try {
+            console.log(`開始準備上傳檔案: ${file.name}`);
             const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -900,6 +923,7 @@ const APP = {
                 statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
               }, 
               (error) => {
+                console.error('[上傳失敗詳細資訊]:', error);
                 alert(`上傳失敗！\n錯誤代碼：${error.code}\n原因：${error.message}`);
                 progressContainer.style.display = 'none';
               }, 
@@ -916,11 +940,13 @@ const APP = {
                      setTimeout(() => { this.openModal('gallery'); }, 1000);
                   }
                 } catch (downloadErr) {
+                  console.error('[取得網址失敗]:', downloadErr);
                   alert('圖片上傳了，但無法取得顯示網址。');
                 }
               }
             );
           } catch (initErr) {
+            console.error('[啟動任務失敗]:', initErr);
             alert('系統錯誤：無法啟動上傳任務');
           }
         });
@@ -979,27 +1005,37 @@ const APP = {
     let csvContent = "\uFEFF";
     csvContent += "=== 打卡紀錄 ===\n日期,上班時間,下班時間,手動登記時數\n"; 
     const punchDates = Object.keys(this.state.punchRecords).sort();
-    if (punchDates.length === 0) csvContent += "尚無打卡紀錄\n";
-    else {
+    if (punchDates.length === 0) {
+      csvContent += "尚無打卡紀錄\n";
+    } else {
       punchDates.forEach(date => {
         const day = this.state.punchRecords[date];
-        if (day.manualTotal > 0) csvContent += `${date},--,--,${day.manualTotal}\n`;
-        else day.records.forEach(r => csvContent += `${date},${r.in},${r.out || '未打卡'},0\n`);
+        if (day.manualTotal > 0) {
+          csvContent += `${date},--,--,${day.manualTotal}\n`;
+        } else {
+          day.records.forEach(r => {
+            csvContent += `${date},${r.in},${r.out || '未打卡'},0\n`;
+          });
+        }
       });
     }
+
     csvContent += "\n\n=== 記帳紀錄 ===\n紀錄時間,消費項目,金額(日圓)\n"; 
-    if (this.state.expenses.length === 0) csvContent += "尚無記帳紀錄\n";
-    else {
+    if (this.state.expenses.length === 0) {
+      csvContent += "尚無記帳紀錄\n";
+    } else {
       const sortedExpenses = [...this.state.expenses].sort((a, b) => a.date.localeCompare(b.date));
       sortedExpenses.forEach(exp => {
         const safeDesc = `"${exp.desc.replace(/"/g, '""')}"`;
         csvContent += `${exp.date},${safeDesc},${exp.amount}\n`;
       });
     }
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `實習報表_${this.getTodayStr()}.csv`;
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `實習報表_${this.getTodayStr()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
