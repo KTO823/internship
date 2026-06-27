@@ -272,6 +272,7 @@ const APP = {
     bindModal('btn-manage-note', 'note');
     bindModal('btn-manage-journal', 'journal');
     bindModal('btn-view-checkin-history', 'checkInHistory');
+    bindModal('btn-manage-checklist', 'manageChecklist');
     
     const btnOpenGallery = document.getElementById('btn-open-gallery');
     if (btnOpenGallery) {
@@ -859,6 +860,49 @@ const APP = {
         return div;
       });
 
+    } else if (type === 'manageChecklist') {
+      this.dom.modalTitle.textContent = '📋 管理學校規定文件清單';
+      this.dom.modalBody.innerHTML = '';
+
+      // 渲染現有的清單項目
+      this.state.checklist.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = 'history-card';
+        div.style.marginBottom = '12px';
+        div.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <p style="margin: 0; font-weight: 600; color: var(--text);">${escapeHtml(c.label)}</p>
+              <p style="margin: 4px 0 0 0; color:var(--text-muted); font-size: 0.85rem;">期限: ${c.date || '無'}</p>
+            </div>
+            <div class="history-actions" style="margin-top:0;">
+              <button class="btn-icon" style="color:var(--primary); font-size:1.1rem; cursor:pointer;" onclick="APP.editChecklistItem(${idx})">✏️</button>
+              <button class="btn-icon" style="color:#ff4444; font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('checklist', ${idx}, 'manageChecklist')">🗑️</button>
+            </div>
+          </div>
+        `;
+        this.dom.modalBody.appendChild(div);
+      });
+
+      // 新增按鈕
+      const addBtn = document.createElement('button');
+      addBtn.className = 'btn secondary';
+      addBtn.textContent = '+ 新增規定文件';
+      addBtn.style.marginTop = '8px';
+      addBtn.onclick = () => {
+        const label = prompt('文件名稱 (例如: 實習合約):');
+        if (!label) return;
+        const date = prompt('截止日期 (YYYY-MM-DD):', this.getTodayStr());
+        if (date) {
+          this.state.checklist.push({ id: 'c' + Date.now(), label, date, checked: false });
+          this.saveState();
+          this.renderChecklist();
+          this.updateDashboard();
+          this.openModal('manageChecklist'); // 自動重新整理彈窗
+        }
+      };
+      this.dom.modalBody.appendChild(addBtn);
+
     } else if (type === 'gallery') {
       this.dom.modalTitle.textContent = '📸 實習相簿';
       this.dom.modalBody.innerHTML = `
@@ -974,6 +1018,20 @@ const APP = {
     const newLabel = prompt('名稱:', q.label); if (newLabel) q.label = newLabel; 
     const newAmt = Number(prompt('金額:', q.amount)); if (newAmt) q.amount = newAmt; 
     this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); 
+  },
+
+  editChecklistItem(index) {
+    const c = this.state.checklist[index];
+    const newLabel = prompt('修改文件名稱:', c.label);
+    if (newLabel) c.label = newLabel;
+    
+    const newDate = prompt('修改截止日期 (YYYY-MM-DD):', c.date);
+    if (newDate) c.date = newDate;
+
+    this.saveState();
+    this.renderChecklist();
+    this.updateDashboard();
+    this.openModal('manageChecklist'); // 修改完自動重新整理彈窗
   },
 
   editPunch(date, idx) { 
