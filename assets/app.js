@@ -574,24 +574,22 @@ const APP = {
           const groupDiv = document.createElement('div');
           groupDiv.className = 'expense-day-group';
           
-          // 卡片頂部的日期與單日總計
+          // 🌟 升級版：卡片頂部的日期與單日總計 (加上藥丸標籤樣式)
           let html = `
-            <div class="expense-day-header">
-                <span>${dateStr} ${weekdayStr}</span>
-                <span class="expense-day-total">￥-${dayTotal}</span>
+            <div class="expense-day-header" style="background: var(--bg); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);">
+                <span style="font-weight: 700; font-size: 0.95rem; color: var(--text);">${dateStr} ${weekdayStr}</span>
+                <span style="background: var(--primary-light); color: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 700; border: 1px solid var(--primary);">￥-${dayTotal}</span>
             </div>
           `;
           
-          // 卡片內部的品項清單
+          // 🌟 還原版：卡片內部的品項清單 (乾淨無 emoji)
           groupedByDate[dateStr].forEach(e => {
-            const trueIdx = this.state.expenses.indexOf(e); // 抓取真實索引供刪除用
+            const trueIdx = this.state.expenses.indexOf(e);
             html += `
-              <div class="expense-item">
-                <div style="display:flex; align-items:center;">
-                  <div style="font-weight:600; font-size:1rem; color:var(--text);">${escapeHtml(e.desc)}</div>
-                </div>
+              <div class="expense-item" style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px dashed var(--border);">
+                <div style="font-weight:600; font-size:1rem; color:var(--text);">${escapeHtml(e.desc)}</div>
                 <div style="display: flex; align-items: center; gap: 12px;">
-                  <div style="font-weight:700; font-size:1rem; color:var(--text);">￥-${e.amount}</div>
+                  <div style="font-weight:700; font-size:1.05rem; color:var(--text); font-family: monospace;">￥${e.amount}</div>
                   <button class="btn-icon" style="color:#ff4444; font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('expenses', ${trueIdx})">🗑️</button>
                 </div>
               </div>
