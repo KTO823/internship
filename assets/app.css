@@ -619,6 +619,19 @@ body.theme-neon-sakura {
   --danger-bg: rgba(216, 112, 147, 0.12); --danger-text: #f4b8cc; --danger-border: rgba(216, 112, 147, 0.4);
   background-image: none;
 }
+body.theme-neon-sakura::before {
+  content: "";
+  position: fixed;
+  top: 15%;
+  right: -10%;
+  width: 60vh;
+  height: 60vh;
+  background: white; /* 純白櫻花 */
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  z-index: -1;
+  opacity: 0.1; /* 設定為 0.1 左右的透明度，看起來會像夢幻浮水印 */
+  pointer-events: none;
+}
 
 /* 3. 120天獎勵：蒔繪金箔 (終極顯色版：加強金線濃度與質感) */
 body.theme-makie-gold {
