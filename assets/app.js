@@ -419,19 +419,19 @@ const APP = {
     
     let msg = `簽到成功！目前已累計簽到 ${this.state.checkInCount} 天！`;
     
-    if (this.state.checkInCount >= 1 && !this.state.unlockedThemes.includes('theme-monochrome')) {
+    if (this.state.checkInCount >= 14 && !this.state.unlockedThemes.includes('theme-monochrome')) {
       this.state.unlockedThemes.push('theme-monochrome');
       msg += '\n\n🎉 達成 14 天簽到！已解鎖主題「簡約黑白」！';
     }
-    if (this.state.checkInCount >= 0 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
+    if (this.state.checkInCount >= 50 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
       this.state.unlockedThemes.push('theme-neon-sakura');
       msg += '\n\n🎉 達成 50 天簽到！已解鎖主題「夜櫻霓虹」！';
     }
-    if (this.state.checkInCount >= 0 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
+    if (this.state.checkInCount >= 100 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
       this.state.unlockedThemes.push('theme-makie-gold');
       msg += '\n\n🎉 達成 100 天簽到！已解鎖主題「蒔繪金箔」！';
     }
-    if (this.state.checkInCount >= 0 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
+    if (this.state.checkInCount >= 200 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
       this.state.unlockedThemes.push('theme-aurora-stage');
       msg += '\n\n🎉 達成 200 天簽到！已解鎖主題「幻光星海」！';
     }
