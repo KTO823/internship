@@ -259,7 +259,7 @@ html, body {
 
 .currency strong {
   font-size: 1.6rem;
-  color: var(--secondary);
+  color: var(--primary);
 }
 
 .divider {
@@ -836,7 +836,9 @@ body.theme-shiba-gold .icon-checkin::before { content: '🐾'; }  /* 簽到變�
   border-bottom: 1px solid var(--border);
 }
 .expense-day-total {
-  color: #d97706; /* 仿圖中的土黃色金額 */
+  color: var(--primary); 
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 .expense-item {
   display: flex;
