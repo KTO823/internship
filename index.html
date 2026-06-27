@@ -193,18 +193,17 @@
             <button class="btn-icon" id="btn-next-month" style="font-size: 1.2rem; padding: 8px 16px; background: var(--primary-light); border-radius: 8px; color: var(--primary);">▶</button>
           </div>
           
-          <!-- 🌟 升級版：本月總支出區塊 -->
-          <div class="card" style="margin-bottom: 24px; border-top: 4px solid var(--primary); background: linear-gradient(180deg, var(--primary-light) 0%, transparent 100%);">
-            <h2 style="margin-top: 0; text-align: center; color: var(--text); font-size: 1.05rem; font-weight: 700; padding-top: 8px;">本月總支出</h2>
-            <div class="expense-display" style="display: flex; justify-content: space-around; align-items: center; padding: 16px 0;">
-              <div class="currency" style="text-align: center;">
-                <span class="label" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">日幣</span>
-                <strong id="expense-jpy" style="color: var(--primary); font-size: 2rem; text-shadow: 0px 2px 4px rgba(0,0,0,0.1);">￥0</strong>
+          <div class="card" style="margin-bottom: 24px;">
+            <h2 style="margin-top: 0; text-align: center; color: var(--text-muted); font-size: 0.95rem;">本月總支出</h2>
+            <div class="expense-display">
+              <div class="currency">
+                <span class="label">日幣</span>
+                <strong id="expense-jpy">￥0</strong>
               </div>
-              <div class="divider" style="width: 1px; height: 50px; background: var(--border);"></div>
-              <div class="currency" style="text-align: center;">
-                <span class="label" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">台幣估算</span>
-                <strong id="expense-ntd" style="color: var(--primary); font-size: 1.5rem; opacity: 0.9;">NT$0</strong>
+              <div class="divider"></div>
+              <div class="currency">
+                <span class="label">台幣估算</span>
+                <strong id="expense-ntd">NT$0</strong>
               </div>
             </div>
           </div>
