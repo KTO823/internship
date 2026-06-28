@@ -908,7 +908,8 @@ const APP = {
       this.dom.modalBody.innerHTML = `
         <div style="margin-bottom: 20px; display:flex; gap: 10px;">
             <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
-            <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
+            <!-- 🌟 加上 display: none 隱藏上傳按鈕 -->
+            <button class="btn" style="display:none;" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
             <button class="btn secondary" id="export-gallery">匯出相簿</button>
         </div>
         <div id="upload-progress-container" style="display:none; margin-bottom: 20px;">
@@ -923,7 +924,8 @@ const APP = {
       const grid = document.getElementById('modal-gallery-grid');
       const images = this.state.galleryImages || [];
       if (images.length === 0) {
-        grid.innerHTML = '<p style="color:gray; font-size:0.9rem;">目前沒有照片，點擊上方按鈕上傳！</p>';
+        // 🌟 修改提示文字，讓使用者知道目前不開放
+        grid.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 20px 0;">(因資料庫空間限制，目前暫不開放雲端圖片上傳功能)</p>';
       } else {
         images.forEach((img, idx) => {
           grid.innerHTML += `
