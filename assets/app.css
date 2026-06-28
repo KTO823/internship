@@ -619,23 +619,29 @@ body.theme-neon-sakura {
   --danger-bg: rgba(216, 112, 147, 0.12); --danger-text: #f4b8cc; --danger-border: rgba(216, 112, 147, 0.4);
   background-image: none;
 }
-/* 夜櫻主題背景裝飾 (高級白色線條版) */
+
+/* 夜櫻主題背景裝飾 (高級白色線條版 - 修正圖層) */
 body.theme-neon-sakura::before {
-  content: "❀"; /* 使用純文字的花朵符號，確保可以完美描邊 */
+  content: "❀"; 
   position: fixed;
   top: 10%;
   right: -5%;
   font-size: 80vh;
-  z-index: -1;
-  pointer-events: none;
+  
+  /* 🌟 關鍵修復 1：把原本的 -1 改成 99，讓櫻花浮在最上層，絕對不會被蓋住 */
+  z-index: 99; 
+  pointer-events: none; /* 讓滑鼠可以穿透它點擊底下的按鈕，非常重要 */
+  
   transform: rotate(15deg);
-
-  /* 🌟 變成「白色線條」的魔法 */
-  color: transparent; /* 1. 讓花朵內部完全透明 */
-  -webkit-text-stroke: 4px rgba(255, 255, 255, 0.15); /* 2. 加上淡淡的白色外框線 */
+  color: transparent; 
+  
+  /* 🌟 關鍵修復 2：稍微加粗線條並提高一點點透明度，確保肉眼可見 */
+  -webkit-text-stroke: 6px rgba(255, 255, 255, 0.25); 
+  
+  /* 確保不同電腦/手機都能正確渲染這個花朵符號 */
+  font-family: "Apple Symbols", "Segoe UI Symbol", sans-serif;
 }
 
-/* 確保主題背景不會被這個裝飾遮住產生卷軸 */
 body.theme-neon-sakura {
   overflow-x: hidden; 
 }
