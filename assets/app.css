@@ -620,7 +620,7 @@ body.theme-neon-sakura {
   background-image: none;
 }
 
-/* 夜櫻主題背景裝飾 (高級白色線條版 - 修正圖層) */
+/* 夜櫻主題背景裝飾 (完美退居背景版) */
 body.theme-neon-sakura::before {
   content: "❀"; 
   position: fixed;
@@ -628,17 +628,16 @@ body.theme-neon-sakura::before {
   right: -5%;
   font-size: 80vh;
   
-  /* 🌟 關鍵修復 1：把原本的 -1 改成 99，讓櫻花浮在最上層，絕對不會被蓋住 */
-  z-index: 99; 
-  pointer-events: none; /* 讓滑鼠可以穿透它點擊底下的按鈕，非常重要 */
+  /* 🌟 關鍵修改：改成 0，讓它待在背景與卡片之間，乖乖當個浮水印 */
+  z-index: 0; 
+  pointer-events: none; 
   
   transform: rotate(15deg);
   color: transparent; 
   
-  /* 🌟 關鍵修復 2：稍微加粗線條並提高一點點透明度，確保肉眼可見 */
-  -webkit-text-stroke: 6px rgba(255, 255, 255, 0.25); 
+  /* 🌟 稍微把透明度從 0.25 調降到 0.12，讓線條更柔和，不會搶走卡片的視覺焦點 */
+  -webkit-text-stroke: 3px rgba(255, 255, 255, 0.12); 
   
-  /* 確保不同電腦/手機都能正確渲染這個花朵符號 */
   font-family: "Apple Symbols", "Segoe UI Symbol", sans-serif;
 }
 
