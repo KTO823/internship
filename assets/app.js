@@ -103,7 +103,13 @@ const APP = {
       this.renderAll();
 
       setTimeout(() => {
-        if (this.state.lastCheckInDate !== this.getTodayStr()) {
+        // 如果還沒登入，且這次打開網頁還沒看過教學，就自動彈出教學與登入提醒
+        if (!user && !sessionStorage.getItem('guideShown')) {
+          this.showGuidePopup();
+          sessionStorage.setItem('guideShown', 'true');
+        } 
+        // 否則，如果已經登入，且今天還沒簽到，就自動彈出簽到視窗
+        else if (this.state.lastCheckInDate !== this.getTodayStr()) {
           this.showDailyCheckInPopup();
         }
       }, 500);
@@ -155,10 +161,17 @@ const APP = {
   },
 
   setupListeners() {
+    // 🌟 把它放在這裡！setupListeners 的一開頭，讓它只綁定一次
+    const btnShowGuide = document.getElementById('btn-show-guide');
+    if (btnShowGuide) {
+      btnShowGuide.addEventListener('click', () => this.showGuidePopup());
+    }
+
     this.dom.navBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         this.dom.pages.forEach(p => p.classList.remove('active'));
         this.dom.navBtns.forEach(b => b.classList.remove('active'));
+        
         const targetPage = document.getElementById(`page-${btn.dataset.page}`);
         if (targetPage) targetPage.classList.add('active');
         document.querySelectorAll(`[data-page="${btn.dataset.page}"]`).forEach(b => b.classList.add('active'));
@@ -493,6 +506,61 @@ const APP = {
     if (!this.dom.historyCheckinCount || !this.dom.historyLastCheckin) return;
     this.dom.historyCheckinCount.textContent = this.state.checkInCount || 0;
     this.dom.historyLastCheckin.textContent = this.state.lastCheckInDate || '尚無紀錄';
+  },
+
+  showGuidePopup() {
+    if (!this.dom.modal) return;
+    this.dom.modal.classList.add('active');
+    this.dom.modalTitle.textContent = '👋 歡迎使用實習助手';
+    
+    let loginHtml = '';
+    if (!this.firebaseUser) {
+      loginHtml = `
+        <div style="margin-top: 20px; padding: 16px; background: rgba(255, 68, 68, 0.08); border-radius: 12px; border: 1px dashed #ff4444; text-align: center;">
+          <p style="margin: 0 0 8px 0; color: #ff4444; font-size: 1rem; font-weight: 700;">⚠️ 尚未登入雲端帳號</p>
+          <p style="margin: 0 0 12px 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">目前資料僅保存在本機，若清除瀏覽器紀錄將會遺失。<br>強烈建議登入以啟用自動雲端備份！</p>
+          <button class="btn" id="modal-guide-login" style="background: #ff4444; color: white; width: 100%; border: none;">立即登入 Google</button>
+        </div>
+      `;
+    } else {
+      loginHtml = `
+        <div style="margin-top: 20px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; text-align: center;">
+          <p style="margin: 0; color: #10b981; font-weight: 700;">✅ 已登入雲端，資料安全同步中</p>
+        </div>
+      `;
+    }
+
+    this.dom.modalBody.innerHTML = `
+      <div style="padding: 10px 4px;">
+        <p style="font-size: 0.95rem; color: var(--text); line-height: 1.8; margin-top: 0;">
+          這是一款專為實習生打造的紀錄工具：<br><br>
+          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">⏳</span> <b>工時打卡</b>：自動計算總工時與進度。</span>
+          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">💰</span> <b>記帳系統</b>：追蹤花費，自動換算台幣。</span>
+          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">📝</span> <b>實習週誌</b>：隨手記錄，一鍵匯出報告。</span>
+          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">✅</span> <b>檢查表</b>：追蹤學校文件，不漏接死線。</span>
+        </p>
+        ${loginHtml}
+        <button class="btn secondary" id="btn-guide-close" style="width: 100%; margin-top: 16px;">我知道了</button>
+      </div>
+    `;
+
+    // 綁定彈窗內的登入按鈕
+    const loginBtn = document.getElementById('modal-guide-login');
+    if (loginBtn) {
+      loginBtn.addEventListener('click', async () => {
+        try { 
+          await signInWithPopup(auth, provider); 
+          this.showGuidePopup(); // 登入成功後，重新整理彈窗變成「已登入」狀態
+        } catch (error) { 
+          alert('登入失敗：' + error.message); 
+        }
+      });
+    }
+
+    // 綁定關閉按鈕
+    document.getElementById('btn-guide-close').addEventListener('click', () => {
+      this.dom.modal.classList.remove('active');
+    });
   },
 
   renderThemeSelectUI() {
