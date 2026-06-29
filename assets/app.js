@@ -103,10 +103,9 @@ const APP = {
       this.renderAll();
 
       setTimeout(() => {
-        // 如果還沒登入，且這次打開網頁還沒看過教學，就自動彈出教學與登入提醒
-        if (!user && !sessionStorage.getItem('guideShown')) {
+        // 只要沒有登入，就強制彈出教學與登入提醒
+        if (!user) {
           this.showGuidePopup();
-          sessionStorage.setItem('guideShown', 'true');
         } 
         // 否則，如果已經登入，且今天還沒簽到，就自動彈出簽到視窗
         else if (this.state.lastCheckInDate !== this.getTodayStr()) {
