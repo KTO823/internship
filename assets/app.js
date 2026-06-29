@@ -262,21 +262,37 @@ const APP = {
     const saveJournalBtn = document.getElementById('save-journal');
     if (saveJournalBtn) {
       saveJournalBtn.addEventListener('click', () => {
-        const journalInput = document.getElementById('weekly-journal');
-        const text = journalInput.value.trim();
-        if (text) { 
-          this.state.journals.push({ id: Date.now(), week: this.getWeekNum(), text, date: this.getNowString() }); 
-          this.checkShibaEgg(text); 
-          journalInput.value = ''; 
+        // 🌟 同時抓取兩個輸入框的內容
+        const contentInput = document.getElementById('journal-content');
+        const reflectionInput = document.getElementById('journal-reflection');
+        const content = contentInput.value.trim();
+        const reflection = reflectionInput.value.trim();
+        
+        if (content || reflection) { 
+          // 🌟 存入兩個不同的屬性
+          this.state.journals.push({ 
+            id: Date.now(), 
+            week: this.getWeekNum(), 
+            content: content, 
+            reflection: reflection, 
+            date: this.getNowString() 
+          }); 
+          
+          this.checkShibaEgg(content + reflection); 
+          contentInput.value = ''; 
+          reflectionInput.value = ''; 
           this.saveState(); 
-          alert('週誌已儲存'); 
+          alert('本週週誌已儲存！'); 
+        } else {
+          alert('請至少填寫一欄內容喔！');
         }
       });
     }
 
-    const btnExportCsv = document.getElementById('export-csv');
-    if (btnExportCsv) {
-      btnExportCsv.addEventListener('click', () => this.exportToCSV());
+    // 🌟 綁定剛剛新增的 Word 匯出按鈕
+    const btnExportWord = document.getElementById('btn-export-word');
+    if (btnExportWord) {
+      btnExportWord.addEventListener('click', () => this.exportAllToWord());
     }
 
     const addReminderBtn = document.getElementById('add-reminder');
@@ -559,6 +575,13 @@ const APP = {
     // 綁定關閉按鈕
     document.getElementById('btn-guide-close').addEventListener('click', () => {
       this.dom.modal.classList.remove('active');
+      
+      // 🌟 新增：關閉教學視窗後，如果今天還沒簽到，就接著跳出簽到！
+      if (this.state.lastCheckInDate !== this.getTodayStr()) {
+        setTimeout(() => {
+          this.showDailyCheckInPopup();
+        }, 300); // 稍微等 0.3 秒，讓前一個視窗先優雅地關閉完畢
+      }
     });
   },
 
@@ -950,18 +973,12 @@ const APP = {
         const div = document.createElement('div');
         div.className = 'history-card';
         div.style.marginBottom = '12px';
-        div.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <p style="margin: 0; font-weight: 600; color: var(--text);">${escapeHtml(c.label)}</p>
-              <p style="margin: 4px 0 0 0; color:var(--text-muted); font-size: 0.85rem;">期限: ${c.date || '無'}</p>
-            </div>
-            <div class="history-actions" style="margin-top:0;">
-              <button class="btn-icon" style="color:var(--primary); font-size:1.1rem; cursor:pointer;" onclick="APP.editChecklistItem(${idx})">✏️</button>
-              <button class="btn-icon" style="color:#ff4444; font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('checklist', ${idx}, 'manageChecklist')">🗑️</button>
-            </div>
-          </div>
-        `;
+        // 讓舊週誌與新週誌都能完美顯示
+        const textDisplay = type === 'journal' 
+          ? (item.text ? `<p style="white-space:pre-wrap;">${escapeHtml(item.text)}</p>` : `<div style="background: rgba(0,0,0,0.02); padding: 8px; border-radius: 6px; margin-bottom: 8px;"><strong style="font-size: 0.85rem; color: var(--primary);">📝 實習內容與進度：</strong><br><span style="white-space:pre-wrap;">${escapeHtml(item.content || '無')}</span></div><div style="background: rgba(0,0,0,0.02); padding: 8px; border-radius: 6px;"><strong style="font-size: 0.85rem; color: var(--primary);">💡 工作心得感想與建議：</strong><br><span style="white-space:pre-wrap;">${escapeHtml(item.reflection || '無')}</span></div>`)
+          : `<p style="white-space:pre-wrap;">${escapeHtml(item.text || '')}</p>`;
+
+        div.innerHTML = `<p><strong>${title}</strong> <span style="font-size:0.8rem; color:gray;">${item.date}</span></p>${textDisplay}<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('${type}s', ${item._idx}, '${type}')">刪除</button></div>`;
         this.dom.modalBody.appendChild(div);
       });
 

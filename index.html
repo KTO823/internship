@@ -236,11 +236,23 @@
             <h2>週誌編寫</h2>
             <div class="card">
               <p class="week-label" id="week-label">請先在設定頁設定實習開始日期</p>
-              <textarea id="weekly-journal" placeholder="寫週誌或報告草稿..." rows="8"></textarea>
-              <div style="display: grid; gap: 12px; margin-top: 12px;">
-                <button class="btn" id="save-journal">儲存週誌</button>
+              
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                  <label style="font-weight: 600; font-size: 0.9rem; color: var(--text);">📝 實習內容與進度</label>
+                  <textarea id="journal-content" placeholder="本週做了哪些事情、學習了什麼技術..." rows="4"></textarea>
+                </div>
+                <div>
+                  <label style="font-weight: 600; font-size: 0.9rem; color: var(--text);">💡 工作心得感想與建議</label>
+                  <textarea id="journal-reflection" placeholder="遇到了什麼困難？有什麼收穫或建議？..." rows="4"></textarea>
+                </div>
+              </div>
+              
+              <div style="display: grid; gap: 12px; margin-top: 16px;">
+                <button class="btn" id="save-journal">儲存本週週誌</button>
+                <button class="btn secondary" id="btn-export-word" style="background-color: #2b579a; color: white; border-color: #2b579a;">📥 匯出 1-16 週週誌 (Word 表格)</button>
+                <button class="btn secondary" id="btn-manage-journal" style="border-style: dashed;">📖 管理歷史週誌</button>
                 <button class="btn secondary" id="btn-open-gallery" style="border-style: dashed;">📸 開啟/管理實習相簿</button>
-                <button class="btn secondary" id="btn-manage-journal" style="border-style: dashed;">📖 管理歷史週誌與匯出</button>
               </div>
             </div>
           </section>
