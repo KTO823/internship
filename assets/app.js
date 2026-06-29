@@ -346,7 +346,8 @@ const APP = {
   getWeekNum() { 
     if (!this.state.startDate) return '未設定';
     const msDiff = new Date() - new Date(this.state.startDate);
-    return Math.floor(msDiff / 86400000 / 7) + 1; 
+    const weekNum = Math.floor(msDiff / 86400000 / 7) + 1; 
+    return weekNum > 0 ? weekNum : 1; // 🌟 如果還沒開工就提早寫，一律先算在第 1 週
   },
 
   handleRealtimePunch(type) {
