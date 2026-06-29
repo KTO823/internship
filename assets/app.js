@@ -1158,6 +1158,95 @@ const APP = {
     const blob = new Blob([JSON.stringify(this.state, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `intern-backup-${this.getTodayStr()}.json`; a.click(); 
   },
 
+  exportAllToWord() {
+    // 1. 建立 16 週的空白陣列底板
+    const weeksData = Array(16).fill(null).map(() => ({ content: '', reflection: '' }));
+
+    // 2. 將你打過的資料，依照週數填入對應的格子
+    this.state.journals.forEach(j => {
+      const w = parseInt(j.week);
+      if (!isNaN(w) && w >= 1 && w <= 16) {
+        // 如果同一週有多筆紀錄，會自動換行相加
+        const c = j.content || j.text || ''; 
+        const r = j.reflection || '';
+        if (c) weeksData[w - 1].content += (weeksData[w - 1].content ? '\n\n' : '') + c;
+        if (r) weeksData[w - 1].reflection += (weeksData[w - 1].reflection ? '\n\n' : '') + r;
+      }
+    });
+
+    // 3. 組合出表格的 HTML
+    let contentRows = '';
+    let reflectionRows = '';
+    for(let i = 0; i < 16; i++) {
+      contentRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;"><strong>第 ${i + 1} 週：</strong><br>${escapeHtml(weeksData[i].content).replace(/\n/g, '<br>')}</td></tr>`;
+      reflectionRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;"><strong>第 ${i + 1} 週：</strong><br>${escapeHtml(weeksData[i].reflection).replace(/\n/g, '<br>')}</td></tr>`;
+    }
+
+    // 4. 套用微軟 Word 專用語法，組合出符合學校規定的報表
+    const html = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>實習生工作週誌</title>
+        <style>
+          body { font-family: "標楷體", "DFKai-SB", serif; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid black; padding: 8px; text-align: left; }
+        </style>
+      </head>
+      <body>
+        <h2 style="text-align: center;">國立臺中科技大學<br>應用資訊日語技優領航 專班 學年度校外實習 實習生工作週誌</h2>
+        
+        <table style="border: none; margin-bottom: 10px;">
+          <tr>
+            <td style="border: 1px solid black; width: 15%;">實習生姓名</td><td style="border: 1px solid black; width: 20%;">${this.state.user.name || ''}</td>
+            <td style="border: 1px solid black; width: 10%;">班級</td><td style="border: 1px solid black; width: 25%;">資訊日語技優四1</td>
+            <td style="border: 1px solid black; width: 10%;">聯絡電話</td><td style="border: 1px solid black; width: 20%;"></td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid black;">學號</td><td style="border: 1px solid black;"></td>
+            <td style="border: 1px solid black;">e-mail</td><td style="border: 1px solid black;" colspan="3"></td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid black;">實習機構名稱</td><td style="border: 1px solid black;" colspan="5"></td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid black;">實習期間</td><td style="border: 1px solid black;" colspan="5">自 ${this.state.startDate || '  年  月  日'} 至 ${this.state.endDate || '  年  月  日'} 止</td>
+          </tr>
+        </table>
+
+        <table>
+          <tr><th style="background-color: #e0e0e0; text-align: center;">實習內容與進度</th></tr>
+          ${contentRows}
+        </table>
+
+        <table>
+          <tr><th style="background-color: #e0e0e0; text-align: center;">工作心得感想與建議</th></tr>
+          ${reflectionRows}
+        </table>
+
+        <table style="border: none; margin-top: 40px; width: 100%;">
+          <tr>
+            <td style="border: none; text-align: center;">實習生簽章：__________________</td>
+            <td style="border: none; text-align: center;">實習機構核章：__________________</td>
+            <td style="border: none; text-align: center;">實習輔導老師：__________________</td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    // 5. 觸發下載 (Word 會自動把這種結構辨識為完美的文件)
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = '實習生工作週誌_1至16週.doc';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
+
   exportToCSV() {
     let csvContent = "\uFEFF";
     csvContent += "=== 打卡紀錄 ===\n日期,上班時間,下班時間,手動登記時數\n"; 
