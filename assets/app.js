@@ -86,6 +86,8 @@ const APP = {
         if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = user.displayName;
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'none';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'block';
+        const loginReminder = document.getElementById('login-reminder-box');
+        if (loginReminder) loginReminder.style.display = 'none';
       } else {
         this.firebaseUser = null;
         this.state.user = { isLoggedIn: false, name: '' };
@@ -94,6 +96,8 @@ const APP = {
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'block';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'none';
         this.saveStateLocally(); 
+        const loginReminder = document.getElementById('login-reminder-box');
+        if (loginReminder) loginReminder.style.display = 'block';
       }
       this.applyTheme();
       this.renderAll();
@@ -183,6 +187,16 @@ const APP = {
     if (this.dom.settingsLogin) {
       this.dom.settingsLogin.addEventListener('click', async () => {
         try { await signInWithPopup(auth, provider); } catch (error) { alert('登入失敗：' + error.message); }
+      });
+    }
+    const guideLoginBtn = document.getElementById('guide-login-btn');
+    if (guideLoginBtn) {
+      guideLoginBtn.addEventListener('click', async () => {
+        try { 
+          await signInWithPopup(auth, provider); 
+        } catch (error) { 
+          alert('登入失敗：' + error.message); 
+        }
       });
     }
 
