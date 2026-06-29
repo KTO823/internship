@@ -1176,15 +1176,26 @@ const APP = {
     // 1. 建立 16 週的空白陣列底板
     const weeksData = Array(16).fill(null).map(() => ({ content: '', reflection: '' }));
 
-    // 2. 將你打過的資料，依照週數填入對應的格子
+    // 2. 🌟 準備一個「備用週數」，用來接住那些「未設定日期」的紀錄
+    let fallbackWeek = 1; 
+    
     this.state.journals.forEach(j => {
-      const w = parseInt(j.week);
-      if (!isNaN(w) && w >= 1 && w <= 16) {
-        // 如果同一週有多筆紀錄，會自動換行相加
-        const c = j.content || j.text || ''; 
-        const r = j.reflection || '';
-        if (c) weeksData[w - 1].content += (weeksData[w - 1].content ? '\n\n' : '') + c;
-        if (r) weeksData[w - 1].reflection += (weeksData[w - 1].reflection ? '\n\n' : '') + r;
+      let w = parseInt(j.week);
+      
+      // 🌟 防呆機制：如果週數是 NaN (未設定)、負數或超過 16，就自動放進空的格子裡
+      if (isNaN(w) || w < 1 || w > 16) {
+        w = fallbackWeek; 
+        fallbackWeek = Math.min(16, fallbackWeek + 1); // 往前推進一格，避免全部擠在同一週
+      }
+      
+      // 抓取內容 (相容舊版的 j.text)
+      const c = j.content || j.text || ''; 
+      const r = j.reflection || '';
+      
+      if (c || r) {
+        // 如果同一格有多筆紀錄，用分隔線隔開
+        if (c) weeksData[w - 1].content += (weeksData[w - 1].content ? '\n\n---\n\n' : '') + c;
+        if (r) weeksData[w - 1].reflection += (weeksData[w - 1].reflection ? '\n\n---\n\n' : '') + r;
       }
     });
 
@@ -1192,8 +1203,12 @@ const APP = {
     let contentRows = '';
     let reflectionRows = '';
     for(let i = 0; i < 16; i++) {
-      contentRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;"><strong>第 ${i + 1} 週：</strong><br>${escapeHtml(weeksData[i].content).replace(/\n/g, '<br>')}</td></tr>`;
-      reflectionRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;"><strong>第 ${i + 1} 週：</strong><br>${escapeHtml(weeksData[i].reflection).replace(/\n/g, '<br>')}</td></tr>`;
+      // 如果完全沒內容，就給一個全形的空白，避免 Word 把格子壓縮得太扁
+      const contentDisplay = weeksData[i].content ? escapeHtml(weeksData[i].content).replace(/\n/g, '<br>') : ' ';
+      const reflectionDisplay = weeksData[i].reflection ? escapeHtml(weeksData[i].reflection).replace(/\n/g, '<br>') : ' ';
+      
+      contentRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;"><strong>第 ${i + 1} 週：</strong><br>${contentDisplay}</td></tr>`;
+      reflectionRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;"><strong>第 ${i + 1} 週：</strong><br>${reflectionDisplay}</td></tr>`;
     }
 
     // 4. 套用微軟 Word 專用語法，組合出符合學校規定的報表
@@ -1205,7 +1220,7 @@ const APP = {
         <style>
           body { font-family: "標楷體", "DFKai-SB", serif; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid black; padding: 8px; text-align: left; }
+          th, td { border: 1px solid black; padding: 8px; text-align: left; line-height: 1.5; }
         </style>
       </head>
       <body>
@@ -1234,6 +1249,8 @@ const APP = {
           ${contentRows}
         </table>
 
+        <br>
+
         <table>
           <tr><th style="background-color: #e0e0e0; text-align: center;">工作心得感想與建議</th></tr>
           ${reflectionRows}
@@ -1250,7 +1267,7 @@ const APP = {
       </html>
     `;
 
-    // 5. 觸發下載 (Word 會自動把這種結構辨識為完美的文件)
+    // 5. 觸發下載
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
