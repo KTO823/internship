@@ -537,7 +537,7 @@ const APP = {
           <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">⏳</span> <b>工時打卡</b>：自動計算總工時與進度。</span>
           <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">💰</span> <b>記帳系統</b>：追蹤花費，自動換算台幣。</span>
           <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">📝</span> <b>實習週誌</b>：隨手記錄，一鍵匯出報告。</span>
-          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">✅</span> <b>檢查表</b>：追蹤學校文件，不漏接死線。</span>
+          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">✅</span> <b>檢查表</b>：提前30日告知，不遺漏事項。</span>
         </p>
         ${loginHtml}
         <button class="btn secondary" id="btn-guide-close" style="width: 100%; margin-top: 16px;">我知道了</button>
