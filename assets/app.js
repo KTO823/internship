@@ -91,7 +91,7 @@ const APP = {
       } else {
         this.firebaseUser = null;
         this.state.user = { isLoggedIn: false, name: '' };
-        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = '未登入 (目前僅保存在本機)';
+        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = '未登入';
         if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = '未登入';
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'block';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'none';
