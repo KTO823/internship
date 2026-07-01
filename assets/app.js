@@ -550,10 +550,26 @@ const APP = {
       <div style="padding: 10px 4px;">
         <p style="font-size: 0.95rem; color: var(--text); line-height: 1.8; margin-top: 0;">
           這是一款專為實習生打造的紀錄工具：<br><br>
-          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">⏳</span> <b>工時打卡</b>：自動計算總工時與進度。</span>
-          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">💰</span> <b>記帳系統</b>：追蹤花費，自動換算台幣。</span>
-          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">📝</span> <b>實習週誌</b>：隨手記錄，一鍵匯出報告。</span>
-          <span style="display:flex; align-items:center; margin-bottom:8px;"><span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center;">✅</span> <b>檢查表</b>：提前30日告知，不遺漏事項。</span>
+          
+          <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
+            <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">⏳</span> 
+            <span><b style="white-space:nowrap;">工時打卡</b>：自動計算總工時與進度。</span>
+          </span>
+          
+          <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
+            <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">💰</span> 
+            <span><b style="white-space:nowrap;">記帳系統</b>：追蹤花費，自動換算台幣。</span>
+          </span>
+          
+          <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
+            <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">📝</span> 
+            <span><b style="white-space:nowrap;">實習週誌</b>：隨手記錄，一鍵匯出報告。</span>
+          </span>
+          
+          <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
+            <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">✅</span> 
+            <span><b style="white-space:nowrap;">檢查表</b>：提前30日告知，不遺漏事項。</span>
+          </span>
         </p>
         ${loginHtml}
         <button class="btn secondary" id="btn-guide-close" style="width: 100%; margin-top: 16px;">我知道了</button>
