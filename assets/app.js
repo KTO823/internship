@@ -1193,92 +1193,78 @@ const APP = {
     // 1. 建立 16 週的空白陣列底板
     const weeksData = Array(16).fill(null).map(() => ({ content: '', reflection: '' }));
 
-    // 2. 🌟 準備一個「備用週數」，用來接住那些「未設定日期」的紀錄
-    let fallbackWeek = 1; 
-    
+    // 2. 將資料準確填入對應週次 (修復同一週被拆開的 Bug)
     this.state.journals.forEach(j => {
       let w = parseInt(j.week);
       
-      // 🌟 防呆機制：如果週數是 NaN (未設定)、負數或超過 16，就自動放進空的格子裡
+      // 如果沒有設定實習開始日期導致週次無法判斷，一律先集中放在第 1 週
       if (isNaN(w) || w < 1 || w > 16) {
-        w = fallbackWeek; 
-        fallbackWeek = Math.min(16, fallbackWeek + 1); // 往前推進一格，避免全部擠在同一週
+        w = 1; 
       }
       
-      // 抓取內容 (相容舊版的 j.text)
       const c = j.content || j.text || ''; 
       const r = j.reflection || '';
       
       if (c || r) {
-        // 如果同一格有多筆紀錄，用分隔線隔開
-        if (c) weeksData[w - 1].content += (weeksData[w - 1].content ? '\n\n---\n\n' : '') + c;
-        if (r) weeksData[w - 1].reflection += (weeksData[w - 1].reflection ? '\n\n---\n\n' : '') + r;
+        // 同一週有多筆紀錄時，用換行隔開，不會再跑到下一週了
+        if (c) weeksData[w - 1].content += (weeksData[w - 1].content ? '\n\n' : '') + c;
+        if (r) weeksData[w - 1].reflection += (weeksData[w - 1].reflection ? '\n\n' : '') + r;
       }
     });
 
-    // 3. 組合出表格的 HTML
+    // 3. 組合出兩種不同格式的內容
     let contentRows = '';
-    let reflectionRows = '';
+    let reflectionContent = '';
+
     for(let i = 0; i < 16; i++) {
-      // 如果完全沒內容，就給一個全形的空白，避免 Word 把格子壓縮得太扁
-      const contentDisplay = weeksData[i].content ? escapeHtml(weeksData[i].content).replace(/\n/g, '<br>') : ' ';
-      const reflectionDisplay = weeksData[i].reflection ? escapeHtml(weeksData[i].reflection).replace(/\n/g, '<br>') : ' ';
+      const weekLabel = `第${i + 1}週`; // 確保中間沒有空格
       
-      contentRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;"><strong>第 ${i + 1} 週：</strong><br>${contentDisplay}</td></tr>`;
-      reflectionRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;"><strong>第 ${i + 1} 週：</strong><br>${reflectionDisplay}</td></tr>`;
+      // 【表格一：實習內容與進度】維持 16 個獨立格子
+      const contentDisplay = weeksData[i].content ? escapeHtml(weeksData[i].content).replace(/\n/g, '<br>') : '';
+      contentRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;">${weekLabel}<br>${contentDisplay}</td></tr>`;
+
+      // 【表格二：工作心得感想與建議】合併成一個大格子，用三個換行符號隔開
+      const reflectionDisplay = weeksData[i].reflection ? escapeHtml(weeksData[i].reflection).replace(/\n/g, '<br>') : '';
+      reflectionContent += `${weekLabel}<br>${reflectionDisplay}`;
+      
+      // 除了最後一週之外，每一週後面都加上三個段落符號 (空三行)
+      if (i < 15) {
+        reflectionContent += `<br><br><br>`;
+      }
     }
 
-    // 4. 套用微軟 Word 專用語法，組合出符合學校規定的報表
+    // 4. 套用純淨版 Word 專用語法 (設定邊距 2cm、取消所有粗體)
     const html = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset='utf-8'>
-        <title>實習生工作週誌</title>
+        <title>實習生工作週誌_純淨版</title>
         <style>
-          body { font-family: "標楷體", "DFKai-SB", serif; }
+          /* 設定上下左右 2 公分邊距 */
+          @page { margin: 2.0cm; }
+          /* 全局取消粗體 */
+          body { font-family: "標楷體", "DFKai-SB", serif; font-weight: normal; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid black; padding: 8px; text-align: left; line-height: 1.5; }
+          th, td { border: 1px solid black; padding: 8px; text-align: left; line-height: 1.5; font-weight: normal; }
+          /* 表頭置中且取消粗體 */
+          th { background-color: #e0e0e0; text-align: center; font-weight: normal; }
         </style>
       </head>
       <body>
-        <h2 style="text-align: center;">國立臺中科技大學<br>應用資訊日語技優領航 專班 學年度校外實習 實習生工作週誌</h2>
-        
-        <table style="border: none; margin-bottom: 10px;">
-          <tr>
-            <td style="border: 1px solid black; width: 15%;">實習生姓名</td><td style="border: 1px solid black; width: 20%;">${this.state.user.name || ''}</td>
-            <td style="border: 1px solid black; width: 10%;">班級</td><td style="border: 1px solid black; width: 25%;">資訊日語技優四1</td>
-            <td style="border: 1px solid black; width: 10%;">聯絡電話</td><td style="border: 1px solid black; width: 20%;"></td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid black;">學號</td><td style="border: 1px solid black;"></td>
-            <td style="border: 1px solid black;">e-mail</td><td style="border: 1px solid black;" colspan="3"></td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid black;">實習機構名稱</td><td style="border: 1px solid black;" colspan="5"></td>
-          </tr>
-          <tr>
-            <td style="border: 1px solid black;">實習期間</td><td style="border: 1px solid black;" colspan="5">自 ${this.state.startDate || '  年  月  日'} 至 ${this.state.endDate || '  年  月  日'} 止</td>
-          </tr>
-        </table>
-
+        <!-- 實習內容與進度表 -->
         <table>
-          <tr><th style="background-color: #e0e0e0; text-align: center;">實習內容與進度</th></tr>
+          <tr><th>實習內容與進度（表列可自行新增）</th></tr>
           ${contentRows}
         </table>
 
         <br>
 
+        <!-- 工作心得感想與建議表 (合併單一欄位版) -->
         <table>
-          <tr><th style="background-color: #e0e0e0; text-align: center;">工作心得感想與建議</th></tr>
-          ${reflectionRows}
-        </table>
-
-        <table style="border: none; margin-top: 40px; width: 100%;">
-          <tr>
-            <td style="border: none; text-align: center;">實習生簽章：__________________</td>
-            <td style="border: none; text-align: center;">實習機構核章：__________________</td>
-            <td style="border: none; text-align: center;">實習輔導老師：__________________</td>
-          </tr>
+          <tr><th>工作心得感想與建議</th></tr>
+          <tr><td style="vertical-align: top; padding: 10px;">
+            ${reflectionContent}
+          </td></tr>
         </table>
       </body>
       </html>
@@ -1289,7 +1275,7 @@ const APP = {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = '實習生工作週誌_1至16週.doc';
+    link.download = '實習生工作週誌_純淨版.doc';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
