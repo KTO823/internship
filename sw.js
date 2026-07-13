@@ -1,7 +1,7 @@
 // sw.js — 實習助手 Service Worker
 // 每次正式發布新版本時，請記得把 CACHE_VERSION 改成新的字串（例如日期），
 // 否則使用者的手機會一直吃到舊的快取版本。
-const CACHE_VERSION = 'v2-2026-07-13';
+const CACHE_VERSION = 'v3-2026-07-13-icon-fix';
 const CACHE_NAME = `intern-app-${CACHE_VERSION}`;
 
 // App Shell：離線時也要能開啟的最基本檔案
@@ -11,9 +11,8 @@ const APP_SHELL = [
   './assets/app.css',
   './assets/app.js',
   './assets/manifest.json',
-  './assets/icons/icon192.jpg',
-  './assets/icons/icon512.jpg',
-  './assets/icons/icon512.jpg',
+  './assets/icons/icon-192.jpg',
+  './assets/icons/icon-512.jpg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -91,8 +90,8 @@ self.addEventListener('push', (event) => {
   const title = notification.title || '實習助手提醒';
   const options = {
     body: notification.body || '你有提醒事項到期了',
-    icon: './assets/icons/icon192.jpg',
-    badge: './assets/icons/icon192.jpg',
+    icon: './assets/icons/icon-192.jpg',
+    badge: './assets/icons/icon-192.jpg',
     data: { url: (payload.data && payload.data.url) || './' },
   };
 
