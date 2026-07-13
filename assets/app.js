@@ -2,7 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA_O2QrUhJo7YqG9rX0DvucMDslw4sF-Io",
@@ -13,11 +13,22 @@ const firebaseConfig = {
   appId: "1:997860315918:web:562eba719dcd16780f7d5f"
 };
 
+// 🌟 Cloudinary 免費圖床設定 —— 去 https://cloudinary.com 註冊後，
+// Dashboard 左上角看得到 Cloud name；Settings → Upload → Add upload preset，
+// Signing Mode 選「Unsigned」，把 preset 名稱貼在下面。兩個都不是密鑰，可以放在前端。
+const CLOUDINARY_CLOUD_NAME = 'eg9zs5ul';
+const CLOUDINARY_UPLOAD_PRESET = 'internship';
+
+// 🌟 網頁推播用的 VAPID 金鑰 —— Firebase 主控台 → 專案設定 → Cloud Messaging →
+// 「網頁設定」→ 產生金鑰組，把那串金鑰貼在這裡（這也不是密鑰，是公開金鑰）。
+const FCM_VAPID_KEY = 'BNf0YnsW4eqvsozpgUTkoBxhsMm1kys_TAiefS9aVUwWOQxkafs7BaKTrtgMnD9Sevg_obIDswrUZf6T-mYJ3Vs';
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
+let messaging = null;
+try { messaging = getMessaging(app); } catch (e) { console.warn('此瀏覽器不支援推播通知', e); }
 
 // ---- PWA：安裝到主畫面 + 離線快取 ----
 const PWA = {
@@ -31,9 +42,11 @@ const PWA = {
   registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch((err) => {
-        console.warn('Service worker 註冊失敗：', err);
-      });
+      navigator.serviceWorker.register('./sw.js')
+        .then((reg) => { this.swRegistration = reg; })
+        .catch((err) => {
+          console.warn('Service worker 註冊失敗：', err);
+        });
     });
   },
   setupInstallPrompt(onReady) {
@@ -60,6 +73,45 @@ const PWA = {
   },
 };
 PWA.registerServiceWorker();
+
+// ---- 推播通知：跟 Firebase Cloud Messaging 拿一組這台裝置專屬的 token，
+// 存進 Firestore 的使用者資料，讓後端排程（Cloudflare Worker）知道要推給誰 ----
+const PushNotify = {
+  async enable() {
+    if (!messaging) {
+      alert('這個瀏覽器不支援推播通知（iOS 需先「加入主畫面」安裝成 App 才能收通知）。');
+      return null;
+    }
+    if (FCM_VAPID_KEY.includes('請填入')) {
+      alert('🚨 尚未設定 VAPID 金鑰，請先在 app.js 頂部填入 FCM_VAPID_KEY');
+      return null;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return 'denied';
+
+    try {
+      const registration = PWA.swRegistration || await navigator.serviceWorker.ready;
+      const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: registration });
+      return token || null;
+    } catch (err) {
+      console.error('取得推播 token 失敗：', err);
+      alert('開啟通知失敗，請確認網站是用 https 開啟，且瀏覽器支援推播功能。');
+      return null;
+    }
+  },
+};
+
+if (messaging) {
+  onMessage(messaging, (payload) => {
+    const title = payload.notification?.title || '實習助手提醒';
+    const body = payload.notification?.body || '';
+    if (PWA.swRegistration) {
+      PWA.swRegistration.showNotification(title, { body, icon: './assets/icons/icon-192.jpg' });
+    } else {
+      alert(`${title}\n${body}`);
+    }
+  });
+}
 
 const STORAGE_KEY = 'intern-dashboard-v9'; 
 
@@ -194,6 +246,11 @@ const APP = {
       historyCheckinCount: document.getElementById('history-checkin-count'),
       historyLastCheckin: document.getElementById('history-last-checkin'),
       
+      notifySection: document.getElementById('notify-app-section'),
+      btnEnableNotify: document.getElementById('btn-enable-notify'),
+      notifyDeniedHint: document.getElementById('notify-denied-hint'),
+      notifyDoneHint: document.getElementById('notify-done-hint'),
+
       installSection: document.getElementById('install-app-section'),
       btnInstallApp: document.getElementById('btn-install-app'),
       installIosHint: document.getElementById('install-ios-hint'),
@@ -242,6 +299,31 @@ const APP = {
     if (this.dom.settingsHoursTarget) this.dom.settingsHoursTarget.addEventListener('change', (e) => { this.state.hoursTarget = Number(e.target.value) || 160; this.saveState(); this.renderHoursPage(); this.updateDashboard(); });
     if (this.dom.settingsStart) this.dom.settingsStart.addEventListener('change', (e) => { this.state.startDate = e.target.value; this.saveState(); this.updateDashboard(); });
     if (this.dom.settingsEnd) this.dom.settingsEnd.addEventListener('change', (e) => { this.state.endDate = e.target.value; this.saveState(); this.updateDashboard(); });
+
+    if (this.dom.btnEnableNotify) {
+      // 如果之前已經拿過權限且有 token，直接顯示完成狀態
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && this.state.fcmToken) {
+        this.dom.btnEnableNotify.style.display = 'none';
+        if (this.dom.notifyDoneHint) this.dom.notifyDoneHint.style.display = 'block';
+      }
+      this.dom.btnEnableNotify.addEventListener('click', async () => {
+        this.dom.btnEnableNotify.textContent = '開啟中...';
+        const result = await PushNotify.enable();
+        this.dom.btnEnableNotify.textContent = '🔔 開啟提醒通知';
+        if (result === 'denied') {
+          if (this.dom.notifyDeniedHint) this.dom.notifyDeniedHint.style.display = 'block';
+          if (this.dom.notifyDoneHint) this.dom.notifyDoneHint.style.display = 'none';
+          return;
+        }
+        if (result) {
+          this.state.fcmToken = result;
+          this.saveState();
+          this.dom.btnEnableNotify.style.display = 'none';
+          if (this.dom.notifyDeniedHint) this.dom.notifyDeniedHint.style.display = 'none';
+          if (this.dom.notifyDoneHint) this.dom.notifyDoneHint.style.display = 'block';
+        }
+      });
+    }
 
     if (this.dom.btnInstallApp) {
       this.dom.btnInstallApp.addEventListener('click', () => PWA.promptInstall());
@@ -1105,8 +1187,7 @@ const APP = {
       this.dom.modalBody.innerHTML = `
         <div style="margin-bottom: 20px; display:flex; gap: 10px;">
             <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
-            <!-- 🌟 加上 display: none 隱藏上傳按鈕 -->
-            <button class="btn" style="display:none;" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
+            <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
             <button class="btn secondary" id="export-gallery">匯出相簿</button>
         </div>
         <div id="upload-progress-container" style="display:none; margin-bottom: 20px;">
@@ -1121,8 +1202,7 @@ const APP = {
       const grid = document.getElementById('modal-gallery-grid');
       const images = this.state.galleryImages || [];
       if (images.length === 0) {
-        // 🌟 修改提示文字，讓使用者知道目前不開放
-        grid.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 20px 0;">(因資料庫空間限制，目前暫不開放雲端圖片上傳功能)</p>';
+        grid.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 20px 0;">還沒有照片，點上面「上傳新圖片」加入第一張吧！</p>';
       } else {
         images.forEach((img, idx) => {
           grid.innerHTML += `
@@ -1139,58 +1219,72 @@ const APP = {
       document.getElementById('image-upload').addEventListener('change', (e) => {
         const files = e.target.files;
         if (files.length === 0) return;
-        
+
         if (!this.firebaseUser) {
           alert('🚨 錯誤：請先在設定頁登入 Google 帳號！');
+          return;
+        }
+
+        if (CLOUDINARY_CLOUD_NAME.includes('請填入')) {
+          alert('🚨 尚未設定 Cloudinary，請先在 app.js 頂部填入 CLOUDINARY_CLOUD_NAME 和 CLOUDINARY_UPLOAD_PRESET');
           return;
         }
 
         const progressContainer = document.getElementById('upload-progress-container');
         const progressBar = document.getElementById('upload-progress-bar');
         const statusText = document.getElementById('upload-status');
-        
+
         progressContainer.style.display = 'block';
         let completedCount = 0;
 
         Array.from(files).forEach((file, index) => {
-          try {
-            console.log(`開始準備上傳檔案: ${file.name}`);
-            const storageRef = ref(storage, `images/${this.firebaseUser.uid}/${Date.now()}_${file.name}`);
-            const uploadTask = uploadBytesResumable(storageRef, file);
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+          // 用資料夾把每個使用者的照片分開放，方便之後管理
+          formData.append('folder', `intern-app/${this.firebaseUser.uid}`);
 
-            uploadTask.on('state_changed', 
-              (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                progressBar.style.width = `${progress}%`;
-                statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
-              }, 
-              (error) => {
-                console.error('[上傳失敗詳細資訊]:', error);
-                alert(`上傳失敗！\n錯誤代碼：${error.code}\n原因：${error.message}`);
-                progressContainer.style.display = 'none';
-              }, 
-              async () => {
-                try {
-                  const url = await getDownloadURL(uploadTask.snapshot.ref);
-                  this.state.galleryImages = this.state.galleryImages || [];
-                  this.state.galleryImages.push({ url, date: this.getNowString() });
-                  this.saveState();
-                  
-                  completedCount++;
-                  if (completedCount === files.length) {
-                     statusText.textContent = '全部上傳完成！';
-                     setTimeout(() => { this.openModal('gallery'); }, 1000);
-                  }
-                } catch (downloadErr) {
-                  console.error('[取得網址失敗]:', downloadErr);
-                  alert('圖片上傳了，但無法取得顯示網址。');
-                }
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`);
+
+          xhr.upload.addEventListener('progress', (evt) => {
+            if (!evt.lengthComputable) return;
+            const progress = (evt.loaded / evt.total) * 100;
+            progressBar.style.width = `${progress}%`;
+            statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
+          });
+
+          xhr.onload = () => {
+            if (xhr.status < 200 || xhr.status >= 300) {
+              console.error('[上傳失敗詳細資訊]:', xhr.responseText);
+              alert(`上傳失敗！\nHTTP ${xhr.status}\n請確認 Cloudinary 的 Cloud name / Upload preset 是否正確，且 preset 設定為 Unsigned。`);
+              progressContainer.style.display = 'none';
+              return;
+            }
+            try {
+              const data = JSON.parse(xhr.responseText);
+              this.state.galleryImages = this.state.galleryImages || [];
+              this.state.galleryImages.push({ url: data.secure_url, date: this.getNowString() });
+              this.saveState();
+
+              completedCount++;
+              if (completedCount === files.length) {
+                statusText.textContent = '全部上傳完成！';
+                setTimeout(() => { this.openModal('gallery'); }, 1000);
               }
-            );
-          } catch (initErr) {
-            console.error('[啟動任務失敗]:', initErr);
-            alert('系統錯誤：無法啟動上傳任務');
-          }
+            } catch (parseErr) {
+              console.error('[解析回應失敗]:', parseErr);
+              alert('圖片上傳了，但無法取得顯示網址。');
+            }
+          };
+
+          xhr.onerror = () => {
+            console.error('[網路錯誤]: Cloudinary 上傳失敗');
+            alert('上傳失敗：網路錯誤，請檢查網路連線後再試一次。');
+            progressContainer.style.display = 'none';
+          };
+
+          xhr.send(formData);
         });
       });
     }
