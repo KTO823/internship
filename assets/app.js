@@ -19,6 +19,48 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
+// ---- PWA：安裝到主畫面 + 離線快取 ----
+const PWA = {
+  deferredPrompt: null,
+  isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  },
+  isIOS() {
+    return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  },
+  registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch((err) => {
+        console.warn('Service worker 註冊失敗：', err);
+      });
+    });
+  },
+  setupInstallPrompt(onReady) {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.deferredPrompt = e;
+      onReady('android');
+    });
+    window.addEventListener('appinstalled', () => {
+      this.deferredPrompt = null;
+      onReady('installed');
+    });
+    if (this.isStandalone()) {
+      onReady('installed');
+    } else if (this.isIOS()) {
+      onReady('ios');
+    }
+  },
+  async promptInstall() {
+    if (!this.deferredPrompt) return;
+    this.deferredPrompt.prompt();
+    await this.deferredPrompt.userChoice;
+    this.deferredPrompt = null;
+  },
+};
+PWA.registerServiceWorker();
+
 const STORAGE_KEY = 'intern-dashboard-v9'; 
 
 const APP = {
@@ -152,6 +194,11 @@ const APP = {
       historyCheckinCount: document.getElementById('history-checkin-count'),
       historyLastCheckin: document.getElementById('history-last-checkin'),
       
+      installSection: document.getElementById('install-app-section'),
+      btnInstallApp: document.getElementById('btn-install-app'),
+      installIosHint: document.getElementById('install-ios-hint'),
+      installDoneHint: document.getElementById('install-done-hint'),
+
       modal: document.getElementById('modal-overlay'),
       modalClose: document.getElementById('modal-close'),
       modalTitle: document.getElementById('modal-title'),
@@ -195,6 +242,27 @@ const APP = {
     if (this.dom.settingsHoursTarget) this.dom.settingsHoursTarget.addEventListener('change', (e) => { this.state.hoursTarget = Number(e.target.value) || 160; this.saveState(); this.renderHoursPage(); this.updateDashboard(); });
     if (this.dom.settingsStart) this.dom.settingsStart.addEventListener('change', (e) => { this.state.startDate = e.target.value; this.saveState(); this.updateDashboard(); });
     if (this.dom.settingsEnd) this.dom.settingsEnd.addEventListener('change', (e) => { this.state.endDate = e.target.value; this.saveState(); this.updateDashboard(); });
+
+    if (this.dom.btnInstallApp) {
+      this.dom.btnInstallApp.addEventListener('click', () => PWA.promptInstall());
+    }
+    PWA.setupInstallPrompt((mode) => {
+      if (!this.dom.installSection) return;
+      this.dom.installSection.style.display = 'block';
+      if (mode === 'android') {
+        this.dom.btnInstallApp.style.display = 'block';
+        if (this.dom.installIosHint) this.dom.installIosHint.style.display = 'none';
+        if (this.dom.installDoneHint) this.dom.installDoneHint.style.display = 'none';
+      } else if (mode === 'ios') {
+        this.dom.btnInstallApp.style.display = 'none';
+        if (this.dom.installIosHint) this.dom.installIosHint.style.display = 'block';
+        if (this.dom.installDoneHint) this.dom.installDoneHint.style.display = 'none';
+      } else if (mode === 'installed') {
+        this.dom.btnInstallApp.style.display = 'none';
+        if (this.dom.installIosHint) this.dom.installIosHint.style.display = 'none';
+        if (this.dom.installDoneHint) this.dom.installDoneHint.style.display = 'block';
+      }
+    });
 
     if (this.dom.settingsLogin) {
       this.dom.settingsLogin.addEventListener('click', async () => {

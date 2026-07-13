@@ -1,0 +1,36 @@
+{
+  "name": "實習助手",
+  "short_name": "啊哈",
+  "description": "專業實習生活管理 APP：工時追蹤、記帳系統、週誌工作台、畢業檢查清單。",
+  "id": "/",
+  "start_url": "../index.html",
+  "scope": "../",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#f5f4f2",
+  "theme_color": "#1f3c88",
+  "lang": "zh-Hant",
+  "dir": "ltr",
+  "categories": ["productivity", "education", "finance"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.JPG",
+      "sizes": "192x192",
+      "type": "image/jpg",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.JPG",
+      "sizes": "512x512",
+      "type": "image/jpg",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.JPG",
+      "sizes": "512x512",
+      "type": "image/jpg",
+      "purpose": "maskable"
+    }
+  ]
+}

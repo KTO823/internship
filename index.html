@@ -3,9 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>實習助手｜卡戳</title>
+  <title>實習助手</title>
   <meta name="description" content="專業實習生活管理 APP：工時追蹤、記帳系統、週誌工作台、畢業檢查清單。" />
   <meta name="theme-color" content="#1f3c88" />
+
+  <!-- PWA：可安裝到手機主畫面 -->
+  <link rel="manifest" href="./assets/manifest.json" />
+  <link rel="icon" type="image/jpg" sizes="512x512" href="./assets/icons/icon-512.JPG" />
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.JPG" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="實習助手" />
+
   <link rel="stylesheet" href="./assets/app.css?v=2" />
 </head>
 <body>
@@ -79,7 +89,7 @@
             <h1 style="margin: 0;">首頁</h1>
             <button class="btn-icon" id="btn-show-guide" style="background: var(--primary-light); color: var(--primary); padding: 4px 8px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; border: none;">📖</button>
           </div>
-          <button class="mobile-settings-btn nav-item" data-page="settings"><span class="dynamic-icon icon-settings"></span></button>
+          <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         
         <div class="page-content">
@@ -146,7 +156,7 @@
       <div class="page" id="page-hours" data-page="hours">
         <div class="page-header">
           <h1>工時管理</h1>
-          <button class="mobile-settings-btn nav-item" data-page="settings"><span class="dynamic-icon icon-settings"></span></button>
+          <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         <div class="page-content">
           <div class="card">
@@ -187,7 +197,7 @@
       <div class="page" id="page-expenses" data-page="expenses">
         <div class="page-header">
           <h1>記帳系統</h1>
-          <button class="mobile-settings-btn nav-item" data-page="settings"><span class="dynamic-icon icon-settings"></span></button>
+          <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
 
         <div class="page-content">
@@ -221,7 +231,7 @@
       <div class="page" id="page-notes" data-page="notes">
         <div class="page-header">
           <h1>週誌與備註</h1>
-          <button class="mobile-settings-btn nav-item" data-page="settings"><span class="dynamic-icon icon-settings"></span></button>
+          <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         <div class="page-content">
           <section class="section">
@@ -266,7 +276,7 @@
       <div class="page" id="page-checklist" data-page="checklist">
         <div class="page-header">
           <h1>畢業通關清單</h1>
-          <button class="mobile-settings-btn nav-item" data-page="settings"><span class="dynamic-icon icon-settings"></span></button>
+          <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         <div class="page-content">
           <section class="section">
@@ -296,10 +306,20 @@
       <div class="page" id="page-settings" data-page="settings">
         <div class="page-header">
           <h1>設定</h1>
-          <button class="mobile-settings-btn nav-item" data-page="settings"><span class="dynamic-icon icon-settings"></span></button>
+          <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         <div class="page-content">
-          
+
+          <section class="section" id="install-app-section" style="display:none;">
+            <h2>安裝應用程式</h2>
+            <div class="card">
+              <p class="hint" style="margin-top:0;">把「實習助手」安裝到主畫面，開啟速度更快，也能離線查看資料。</p>
+              <button class="btn" id="btn-install-app" style="width:100%;">📲 安裝到主畫面</button>
+              <p class="hint" id="install-ios-hint" style="display:none; margin-bottom:0;">iPhone / iPad 請點瀏覽器下方的「分享」按鈕，再選擇「加入主畫面」。</p>
+              <p class="hint" id="install-done-hint" style="display:none; margin-bottom:0;">✅ 已安裝完成，可從主畫面直接開啟。</p>
+            </div>
+          </section>
+
           <section class="section">
             <h2>帳號登入</h2>
             <div class="card">
