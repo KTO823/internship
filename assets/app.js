@@ -106,7 +106,7 @@ if (messaging) {
     const title = payload.notification?.title || '實習助手提醒';
     const body = payload.notification?.body || '';
     if (PWA.swRegistration) {
-      PWA.swRegistration.showNotification(title, { body, icon: './assets/icons/icon-192.jpg' });
+      PWA.swRegistration.showNotification(title, { body, icon: './assets/icons/icon192.jpg' });
     } else {
       alert(`${title}\n${body}`);
     }

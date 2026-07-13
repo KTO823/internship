@@ -11,9 +11,9 @@ const APP_SHELL = [
   './assets/app.css',
   './assets/app.js',
   './assets/manifest.json',
-  './assets/icons/icon-192.jpg',
-  './assets/icons/icon-512.jpg',
-  './assets/icons/icon-512.jpg',
+  './assets/icons/icon192.jpg',
+  './assets/icons/icon512.jpg',
+  './assets/icons/icon512.jpg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -91,8 +91,8 @@ self.addEventListener('push', (event) => {
   const title = notification.title || '實習助手提醒';
   const options = {
     body: notification.body || '你有提醒事項到期了',
-    icon: './assets/icons/icon-192.jpg',
-    badge: './assets/icons/icon-192.jpg',
+    icon: './assets/icons/icon192.jpg',
+    badge: './assets/icons/icon192.jpg',
     data: { url: (payload.data && payload.data.url) || './' },
   };
 
