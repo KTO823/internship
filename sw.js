@@ -1,7 +1,7 @@
-// sw.js — 實習助手 Service Worker
+// sw.js — 實習時期 Service Worker
 // 每次正式發布新版本時，請記得把 CACHE_VERSION 改成新的字串（例如日期），
 // 否則使用者的手機會一直吃到舊的快取版本。
-const CACHE_VERSION = 'v3-2026-07-13-icon-fix';
+const CACHE_VERSION = 'v5-2026-07-13-app-name';
 const CACHE_NAME = `intern-app-${CACHE_VERSION}`;
 
 // App Shell：離線時也要能開啟的最基本檔案
@@ -87,7 +87,7 @@ self.addEventListener('push', (event) => {
   try { payload = event.data ? event.data.json() : {}; } catch (e) { payload = {}; }
 
   const notification = payload.notification || payload.data || {};
-  const title = notification.title || '實習助手提醒';
+  const title = notification.title || '實習時期提醒';
   const options = {
     body: notification.body || '你有提醒事項到期了',
     icon: './assets/icons/icon-192.jpg',

@@ -103,7 +103,7 @@ const PushNotify = {
 
 if (messaging) {
   onMessage(messaging, (payload) => {
-    const title = payload.notification?.title || '實習助手提醒';
+    const title = payload.notification?.title || '實習時期提醒';
     const body = payload.notification?.body || '';
     if (PWA.swRegistration) {
       PWA.swRegistration.showNotification(title, { body, icon: './assets/icons/icon-192.jpg' });
@@ -669,7 +669,7 @@ const APP = {
   showGuidePopup() {
     if (!this.dom.modal) return;
     this.dom.modal.classList.add('active');
-    this.dom.modalTitle.textContent = '👋 歡迎使用實習助手';
+    this.dom.modalTitle.textContent = '👋 歡迎使用實習時期';
     
     let loginHtml = '';
     if (!this.firebaseUser) {
