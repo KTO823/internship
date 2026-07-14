@@ -246,15 +246,13 @@ const APP = {
       historyCheckinCount: document.getElementById('history-checkin-count'),
       historyLastCheckin: document.getElementById('history-last-checkin'),
       
-      notifySection: document.getElementById('notify-app-section'),
+      notifyRow: document.getElementById('notify-row'),
+      notifyRowDesc: document.getElementById('notify-row-desc'),
       btnEnableNotify: document.getElementById('btn-enable-notify'),
-      notifyDeniedHint: document.getElementById('notify-denied-hint'),
-      notifyDoneHint: document.getElementById('notify-done-hint'),
 
-      installSection: document.getElementById('install-app-section'),
+      installRow: document.getElementById('install-row'),
+      installRowDesc: document.getElementById('install-row-desc'),
       btnInstallApp: document.getElementById('btn-install-app'),
-      installIosHint: document.getElementById('install-ios-hint'),
-      installDoneHint: document.getElementById('install-done-hint'),
 
       modal: document.getElementById('modal-overlay'),
       modalClose: document.getElementById('modal-close'),
@@ -304,23 +302,21 @@ const APP = {
       // 如果之前已經拿過權限且有 token，直接顯示完成狀態
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && this.state.fcmToken) {
         this.dom.btnEnableNotify.style.display = 'none';
-        if (this.dom.notifyDoneHint) this.dom.notifyDoneHint.style.display = 'block';
+        if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '✅ 已開啟，提醒到期時會推播給你';
       }
       this.dom.btnEnableNotify.addEventListener('click', async () => {
         this.dom.btnEnableNotify.textContent = '開啟中...';
         const result = await PushNotify.enable();
-        this.dom.btnEnableNotify.textContent = '🔔 開啟提醒通知';
+        this.dom.btnEnableNotify.textContent = '開啟';
         if (result === 'denied') {
-          if (this.dom.notifyDeniedHint) this.dom.notifyDeniedHint.style.display = 'block';
-          if (this.dom.notifyDoneHint) this.dom.notifyDoneHint.style.display = 'none';
+          if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '⚠️ 通知權限被封鎖，請到瀏覽器設定手動開啟';
           return;
         }
         if (result) {
           this.state.fcmToken = result;
           this.saveState();
           this.dom.btnEnableNotify.style.display = 'none';
-          if (this.dom.notifyDeniedHint) this.dom.notifyDeniedHint.style.display = 'none';
-          if (this.dom.notifyDoneHint) this.dom.notifyDoneHint.style.display = 'block';
+          if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '✅ 已開啟，提醒到期時會推播給你';
         }
       });
     }
@@ -329,20 +325,17 @@ const APP = {
       this.dom.btnInstallApp.addEventListener('click', () => PWA.promptInstall());
     }
     PWA.setupInstallPrompt((mode) => {
-      if (!this.dom.installSection) return;
-      this.dom.installSection.style.display = 'block';
+      if (!this.dom.installRow) return;
+      this.dom.installRow.style.display = 'flex';
       if (mode === 'android') {
-        this.dom.btnInstallApp.style.display = 'block';
-        if (this.dom.installIosHint) this.dom.installIosHint.style.display = 'none';
-        if (this.dom.installDoneHint) this.dom.installDoneHint.style.display = 'none';
+        this.dom.btnInstallApp.style.display = 'inline-flex';
+        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = '安裝到主畫面，開啟更快、可離線查看';
       } else if (mode === 'ios') {
         this.dom.btnInstallApp.style.display = 'none';
-        if (this.dom.installIosHint) this.dom.installIosHint.style.display = 'block';
-        if (this.dom.installDoneHint) this.dom.installDoneHint.style.display = 'none';
+        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = '點瀏覽器下方「分享」→「加入主畫面」';
       } else if (mode === 'installed') {
         this.dom.btnInstallApp.style.display = 'none';
-        if (this.dom.installIosHint) this.dom.installIosHint.style.display = 'none';
-        if (this.dom.installDoneHint) this.dom.installDoneHint.style.display = 'block';
+        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = '✅ 已安裝完成，可從主畫面直接開啟';
       }
     });
 
@@ -472,16 +465,6 @@ const APP = {
     }
     
     if (this.dom.modalClose) this.dom.modalClose.addEventListener('click', () => { this.dom.modal.classList.remove('active'); });
-
-    const btnExport = document.getElementById('data-export');
-    if (btnExport) btnExport.addEventListener('click', () => this.exportData());
-    
-    const btnImport = document.getElementById('data-import');
-    const fileImport = document.getElementById('import-file');
-    if (btnImport && fileImport) {
-      btnImport.addEventListener('click', () => fileImport.click());
-      fileImport.addEventListener('change', (e) => this.importData(e));
-    }
   },
 
   getNowString() { 
@@ -498,6 +481,15 @@ const APP = {
     const msDiff = new Date() - new Date(this.state.startDate);
     const weekNum = Math.floor(msDiff / 86400000 / 7) + 1; 
     return weekNum > 0 ? weekNum : 1; // 🌟 如果還沒開工就提早寫，一律先算在第 1 週
+  },
+
+  // 跟 getWeekNum() 邏輯一樣，但可以指定任何一個日期（例如照片的拍攝/上傳日），
+  // 用來把相簿照片依實習週次分類
+  getWeekNumForDate(dateStr) {
+    if (!this.state.startDate || !dateStr) return 1;
+    const msDiff = new Date(dateStr) - new Date(this.state.startDate);
+    const weekNum = Math.floor(msDiff / 86400000 / 7) + 1;
+    return weekNum > 0 ? weekNum : 1;
   },
 
   handleRealtimePunch(type) {
@@ -682,10 +674,10 @@ const APP = {
     let loginHtml = '';
     if (!this.firebaseUser) {
       loginHtml = `
-        <div style="margin-top: 20px; padding: 16px; background: rgba(255, 68, 68, 0.08); border-radius: 12px; border: 1px dashed #ff4444; text-align: center;">
-          <p style="margin: 0 0 8px 0; color: #ff4444; font-size: 1rem; font-weight: 700;">⚠️ 尚未登入雲端帳號</p>
+        <div style="margin-top: 20px; padding: 16px; background: rgba(239, 68, 68, 0.08); border-radius: 12px; border: 1px dashed var(--danger); text-align: center;">
+          <p style="margin: 0 0 8px 0; color: var(--danger); font-size: 1rem; font-weight: 700;">⚠️ 尚未登入雲端帳號</p>
           <p style="margin: 0 0 12px 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">目前資料僅保存在本機，若清除瀏覽器紀錄將會遺失。<br>強烈建議登入以啟用自動雲端備份！</p>
-          <button class="btn" id="modal-guide-login" style="background: #ff4444; color: white; width: 100%; border: none;">立即登入 Google</button>
+          <button class="btn" id="modal-guide-login" style="background: var(--danger); color: white; width: 100%; border: none;">立即登入 Google</button>
         </div>
       `;
     } else {
@@ -863,7 +855,7 @@ const APP = {
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <div style="font-weight:700; font-size:1rem; color:var(--text);">￥-${e.amount}</div>
-                  <button class="btn-icon" style="color:#ff4444; font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('expenses', ${trueIdx})">🗑️</button>
+                  <button class="btn-icon" style="color:var(--danger); font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('expenses', ${trueIdx})">🗑️</button>
                 </div>
               </div>
             `;
@@ -1156,7 +1148,7 @@ const APP = {
             </div>
             <div class="history-actions" style="margin-top:0;">
               <button class="btn-icon" style="color:var(--primary); font-size:1.1rem; cursor:pointer;" onclick="APP.editChecklistItem(${idx})">✏️</button>
-              <button class="btn-icon" style="color:#ff4444; font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('checklist', ${idx}, 'manageChecklist')">🗑️</button>
+              <button class="btn-icon" style="color:var(--danger); font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('checklist', ${idx}, 'manageChecklist')">🗑️</button>
             </div>
           </div>
         `;
@@ -1185,10 +1177,10 @@ const APP = {
     } else if (type === 'gallery') {
       this.dom.modalTitle.textContent = '📸 實習相簿';
       this.dom.modalBody.innerHTML = `
-        <div style="margin-bottom: 20px; display:flex; gap: 10px;">
+        <div style="margin-bottom: 20px; display:flex; gap: 10px; flex-wrap: wrap;">
             <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
             <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
-            <button class="btn secondary" id="export-gallery">匯出相簿</button>
+            <button class="btn secondary" id="export-gallery">📥 匯出成 Word（依週次）</button>
         </div>
         <div id="upload-progress-container" style="display:none; margin-bottom: 20px;">
             <div class="progress-bar" style="background: rgba(0,0,0,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
@@ -1196,25 +1188,42 @@ const APP = {
             </div>
             <p id="upload-status" style="font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top: 8px;">準備上傳...</p>
         </div>
-        <div class="masonry-grid" id="modal-gallery-grid" style="column-count: 2; column-gap: 15px;"></div>
+        <div id="modal-gallery-groups"></div>
       `;
 
-      const grid = document.getElementById('modal-gallery-grid');
+      const groupsContainer = document.getElementById('modal-gallery-groups');
       const images = this.state.galleryImages || [];
       if (images.length === 0) {
-        grid.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 20px 0;">還沒有照片，點上面「上傳新圖片」加入第一張吧！</p>';
+        groupsContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 20px 0;">還沒有照片，點上面「上傳新圖片」加入第一張吧！</p>';
       } else {
+        // 依實習週次分組；沒有 week 欄位的舊照片，用當初上傳日期回推所屬週次
+        const byWeek = {};
         images.forEach((img, idx) => {
-          grid.innerHTML += `
-            <div class="gallery-item" style="margin-bottom: 15px; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--border);">
+          const week = img.week || this.getWeekNumForDate(img.date);
+          if (!byWeek[week]) byWeek[week] = [];
+          byWeek[week].push({ ...img, idx });
+        });
+        const weekKeys = Object.keys(byWeek).map(Number).sort((a, b) => a - b);
+
+        groupsContainer.innerHTML = weekKeys.map((week) => {
+          const cards = byWeek[week].map((img) => `
+            <div class="gallery-item" style="margin-bottom: 15px; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--border); break-inside: avoid;">
               <img src="${img.url}" style="width: 100%; display: block;" alt="實習照片">
               <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 6px; font-size: 0.75rem;">
                 ${img.date}
-                <button onclick="APP.deleteItem('galleryImages', ${idx}, 'gallery')" style="float:right; background:none; border:none; color:#ff4444; cursor:pointer;">刪除</button>
+                <button class="btn-icon" onclick="APP.deleteItem('galleryImages', ${img.idx}, 'gallery')" style="float:right; background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer;">🗑️</button>
               </div>
+            </div>`).join('');
+          return `
+            <div class="gallery-week-group" style="margin-bottom: 24px;">
+              <h3 style="font-size: 0.95rem; color: var(--text-muted); margin: 0 0 12px;">第 ${week} 週</h3>
+              <div class="masonry-grid" style="column-count: 2; column-gap: 15px;">${cards}</div>
             </div>`;
-        });
+        }).join('');
       }
+
+      const exportGalleryBtn = document.getElementById('export-gallery');
+      if (exportGalleryBtn) exportGalleryBtn.addEventListener('click', () => this.exportGalleryToWord());
 
       document.getElementById('image-upload').addEventListener('change', (e) => {
         const files = e.target.files;
@@ -1264,7 +1273,7 @@ const APP = {
             try {
               const data = JSON.parse(xhr.responseText);
               this.state.galleryImages = this.state.galleryImages || [];
-              this.state.galleryImages.push({ url: data.secure_url, date: this.getNowString() });
+              this.state.galleryImages.push({ url: data.secure_url, date: this.getNowString(), week: this.getWeekNum() });
               this.saveState();
 
               completedCount++;
@@ -1345,10 +1354,6 @@ const APP = {
 
   exportJournal(index) { 
     const j = this.state.journals[index]; const win = window.open('', '_blank'); win.document.write(`<html><head><title>第 ${j.week} 週週誌</title></head><body style="font-family: sans-serif; padding: 40px; line-height: 1.8;"><h2>第 ${j.week} 週實習週誌</h2><hr><p style="white-space: pre-wrap;">${escapeHtml(j.text)}</p></body></html>`); win.document.close(); 
-  },
-  
-  exportData() { 
-    const blob = new Blob([JSON.stringify(this.state, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `intern-backup-${this.getTodayStr()}.json`; a.click(); 
   },
 
   exportAllToWord() {
@@ -1443,6 +1448,103 @@ const APP = {
     document.body.removeChild(link);
   },
 
+  // 把每張圖片抓下來轉成 base64，這樣存成的 .doc 檔案本身就包含完整照片，
+  // 之後就算網路斷線、Cloudinary 網址失效，開啟舊檔案還是看得到照片。
+  async _urlToBase64(url) {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  },
+
+  async exportGalleryToWord() {
+    const images = this.state.galleryImages || [];
+    if (images.length === 0) {
+      alert('目前還沒有照片可以匯出。');
+      return;
+    }
+
+    const exportBtn = document.getElementById('export-gallery');
+    const originalLabel = exportBtn ? exportBtn.textContent : '';
+    if (exportBtn) { exportBtn.disabled = true; exportBtn.textContent = '轉換中，請稍候...'; }
+
+    try {
+      // 1. 依週次分組
+      const byWeek = {};
+      images.forEach((img) => {
+        const week = img.week || this.getWeekNumForDate(img.date);
+        if (!byWeek[week]) byWeek[week] = [];
+        byWeek[week].push(img);
+      });
+      const weekKeys = Object.keys(byWeek).map(Number).sort((a, b) => a - b);
+
+      // 2. 把每張圖轉成 base64（平行處理，加快速度）
+      const base64Cache = {};
+      await Promise.all(images.map(async (img) => {
+        try {
+          base64Cache[img.url] = await this._urlToBase64(img.url);
+        } catch (e) {
+          console.error('圖片轉換失敗：', img.url, e);
+          base64Cache[img.url] = null;
+        }
+      }));
+
+      // 3. 組成一週一列的表格
+      const rows = weekKeys.map((week) => {
+        const cellImages = byWeek[week].map((img) => {
+          const src = base64Cache[img.url];
+          if (!src) return `<p style="color:#999;">（這張照片轉換失敗：${img.date}）</p>`;
+          return `<img src="${src}" style="width:220px; margin:6px; border:1px solid #ccc;"><br><span style="font-size:9pt; color:#666;">${img.date}</span>`;
+        }).join('');
+        return `
+          <tr>
+            <td style="border:1px solid black; padding:10px; width:80px; vertical-align:top; font-weight:normal;">第 ${week} 週</td>
+            <td style="border:1px solid black; padding:10px; vertical-align:top;">${cellImages}</td>
+          </tr>`;
+      }).join('');
+
+      const html = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset='utf-8'>
+          <title>實習相簿</title>
+          <style>
+            @page { margin: 2.0cm; }
+            body { font-family: "標楷體", "DFKai-SB", serif; font-weight: normal; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; font-weight: normal; }
+            th { background-color: #e0e0e0; text-align: center; padding: 8px; }
+          </style>
+        </head>
+        <body>
+          <table>
+            <tr><th>週次</th><th>照片</th></tr>
+            ${rows}
+          </table>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = '實習相簿_依週次.doc';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('匯出相簿失敗：', e);
+      alert('匯出失敗，請確認網路連線後再試一次。');
+    } finally {
+      if (exportBtn) { exportBtn.disabled = false; exportBtn.textContent = originalLabel; }
+    }
+  },
+
   exportToCSV() {
     let csvContent = "\uFEFF";
     csvContent += "=== 打卡紀錄 ===\n日期,上班時間,下班時間,手動登記時數\n"; 
@@ -1483,10 +1585,6 @@ const APP = {
     document.body.removeChild(link);
   },
   
-  importData(event) { 
-    const file = event.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = e => { try { const data = JSON.parse(e.target.result); this.state = { ...this.state, ...data }; this.saveState(); this.renderAll(); alert('資料匯入成功！'); } catch { alert('檔案格式錯誤，匯入失敗。'); } }; reader.readAsText(file); 
-  },
-
   async saveState() { 
     this.saveStateLocally();
     if (this.firebaseUser) { try { await setDoc(doc(db, "users", this.firebaseUser.uid), this.state); } catch (e) { console.error('同步雲端失敗', e); } }

@@ -282,6 +282,54 @@ html, body {
   gap: 12px;
 }
 
+.field-hint {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: -2px 0 -6px 2px;
+}
+
+.status-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 4px;
+}
+
+.status-row + .status-row {
+  border-top: 1px solid var(--border);
+}
+
+.status-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.status-row-text strong {
+  font-size: 0.95rem;
+}
+
+.status-row-text .hint {
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.btn-compact {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* 把 .setting-row input 也加進來一起美化 */
 .input-group input,
 .styled-select,
