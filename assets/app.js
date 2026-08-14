@@ -113,6 +113,13 @@ if (messaging) {
   });
 }
 
+// 記帳分類 —— 跟你自己 Excel 帳本裡「分類清單」那頁的項目一字不差，
+// 這樣 App 匯出的資料才能直接貼進你原本的表格，分類欄位不用再手動對照。
+const EXPENSE_CATEGORIES = [
+  '1.飲食類-正餐', '2.飲食類-點心', '3.飲食類-飲品', '4.飲食類-其他',
+  '5.交通', '6.購物', '7.娛樂', '8.日用品', '9.醫療', '10理髮', '11.保險費', '12.投資',
+];
+
 const STORAGE_KEY = 'intern-dashboard-v9'; 
 
 const APP = {
@@ -458,6 +465,7 @@ const APP = {
     bindModal('btn-manage-journal', 'journal');
     bindModal('btn-view-checkin-history', 'checkInHistory');
     bindModal('btn-manage-checklist', 'manageChecklist');
+    bindModal('btn-export-expense-month', 'exportExpenseMonth');
     
     const btnOpenGallery = document.getElementById('btn-open-gallery');
     if (btnOpenGallery) {
@@ -542,7 +550,7 @@ const APP = {
     this.renderExpenses();
   },
 
-  addExpenseRecord(desc, amount, customDate = null) {
+  addExpenseRecord(desc, amount, customDate = null, category = null) {
     const targetDate = customDate || this.getTodayStr();
     const currentIsoMonth = targetDate.slice(0, 7);
     this.state.expenses.push({ 
@@ -550,7 +558,8 @@ const APP = {
       desc, 
       amount, 
       date: targetDate, 
-      isoMonth: currentIsoMonth
+      isoMonth: currentIsoMonth,
+      category: category || '未分類',
     });
     this.state.currentExpenseMonth = currentIsoMonth; 
     this.saveState(); 
@@ -850,8 +859,9 @@ const APP = {
             const trueIdx = this.state.expenses.indexOf(e); // 抓取真實索引供刪除用
             html += `
               <div class="expense-item">
-                <div style="display:flex; align-items:center;">
+                <div style="display:flex; flex-direction:column; gap:2px;">
                   <div style="font-weight:600; font-size:1rem; color:var(--text);">${escapeHtml(e.desc)}</div>
+                  <div style="font-size:0.78rem; color:var(--text-muted);">${escapeHtml(e.category || '未分類')}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <div style="font-weight:700; font-size:1rem; color:var(--text);">￥-${e.amount}</div>
@@ -997,8 +1007,12 @@ const APP = {
         <h3 style="margin: 0 0 12px; font-size: 1rem;">✍️ 自訂輸入</h3>
         <div class="input-group">
           <input type="text" id="modal-exp-desc" placeholder="買了什麼？ (例如: 午餐)">
+          <label for="modal-exp-category" class="field-hint">支出分類</label>
+          <select id="modal-exp-category">
+            ${EXPENSE_CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join('')}
+          </select>
           <input type="number" id="modal-exp-amount" placeholder="輸入日幣金額" min="0" step="10">
-          <button class="btn" id="modal-exp-add" style="background: #f67280; color: white;">確認記帳</button>
+          <button class="btn" id="modal-exp-add">確認記帳</button>
         </div>
       `;
 
@@ -1010,7 +1024,7 @@ const APP = {
         btn.textContent = `${q.label} ￥${q.amount}`;
         btn.onclick = () => {
           const d = document.getElementById('modal-exp-date').value || this.getTodayStr();
-          this.addExpenseRecord(q.label, q.amount, d);
+          this.addExpenseRecord(q.label, q.amount, d, q.category);
           this.dom.modal.classList.remove('active'); // 自動關閉視窗
         };
         quickBox.appendChild(btn);
@@ -1021,11 +1035,132 @@ const APP = {
         const desc = document.getElementById('modal-exp-desc').value.trim() || '自訂支出';
         const amt = Number(document.getElementById('modal-exp-amount').value);
         const d = document.getElementById('modal-exp-date').value || this.getTodayStr();
+        const category = document.getElementById('modal-exp-category').value;
         if (amt > 0) {
-          this.addExpenseRecord(desc, amt, d);
+          this.addExpenseRecord(desc, amt, d, category);
           this.dom.modal.classList.remove('active'); // 自動關閉視窗
         }
       };
+
+    } else if (type === 'exportExpenseMonth') {
+      this.dom.modalTitle.textContent = '📋 匯出支出明細';
+
+      // 找出所有有記帳資料的月份，預設選目前正在看的那個月
+      const monthsWithData = [...new Set(this.state.expenses.map(e => e.isoMonth))].sort();
+      const defaultMonth = this.state.currentExpenseMonth && monthsWithData.includes(this.state.currentExpenseMonth)
+        ? this.state.currentExpenseMonth
+        : (monthsWithData[monthsWithData.length - 1] || this.getTodayStr().slice(0, 7));
+
+      this.dom.modalBody.innerHTML = `
+        <div class="input-group" style="margin-bottom: 20px;">
+          <label for="export-month-select" class="field-hint">選擇月份</label>
+          <select id="export-month-select">
+            ${monthsWithData.length === 0 ? `<option value="${defaultMonth}">本月尚無資料</option>` : ''}
+            ${monthsWithData.map(m => {
+              const [y, mo] = m.split('-');
+              return `<option value="${m}" ${m === defaultMonth ? 'selected' : ''}>${y}年${parseInt(mo)}月</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div style="display:flex; gap:10px; margin-bottom: 20px; flex-wrap:wrap;">
+          <button class="btn" id="btn-copy-expense-month" style="flex:1;">📋 複製到剪貼簿</button>
+          <button class="btn secondary" id="btn-download-expense-month" style="flex:1;">📥 下載 Excel 檔</button>
+        </div>
+        <p class="hint" style="margin-top:0; font-size:0.82rem;">複製後直接到你 Excel 帳本對應月份的空白列，按貼上即可，欄位順序是「日期、分類、項目、實際支出」。</p>
+        <div style="overflow-x:auto; border:1px solid var(--border); border-radius: 12px;">
+          <table id="export-preview-table" style="width:100%; border-collapse: collapse; font-size:0.85rem;">
+            <thead>
+              <tr style="background: var(--primary-light);">
+                <th style="padding:8px; text-align:left;">日期</th>
+                <th style="padding:8px; text-align:left;">分類</th>
+                <th style="padding:8px; text-align:left;">項目</th>
+                <th style="padding:8px; text-align:right;">實際支出</th>
+              </tr>
+            </thead>
+            <tbody id="export-preview-body"></tbody>
+          </table>
+        </div>
+      `;
+
+      const monthSelect = document.getElementById('export-month-select');
+      const previewBody = document.getElementById('export-preview-body');
+      const copyBtn = document.getElementById('btn-copy-expense-month');
+      const downloadBtn = document.getElementById('btn-download-expense-month');
+
+      const getRowsForMonth = (month) => {
+        return this.state.expenses
+          .filter(e => e.isoMonth === month)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map(e => ({
+            date: e.date,
+            category: e.category || '未分類',
+            desc: e.desc,
+            amount: e.amount,
+          }));
+      };
+
+      const renderPreview = () => {
+        const rows = getRowsForMonth(monthSelect.value);
+        if (rows.length === 0) {
+          previewBody.innerHTML = `<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--text-muted);">這個月沒有支出紀錄</td></tr>`;
+          return;
+        }
+        previewBody.innerHTML = rows.map(r => `
+          <tr style="border-top:1px solid var(--border);">
+            <td style="padding:8px;">${escapeHtml(r.date)}</td>
+            <td style="padding:8px;">${escapeHtml(r.category)}</td>
+            <td style="padding:8px;">${escapeHtml(r.desc)}</td>
+            <td style="padding:8px; text-align:right;">${r.amount}</td>
+          </tr>
+        `).join('');
+      };
+      renderPreview();
+      monthSelect.addEventListener('change', renderPreview);
+
+      copyBtn.addEventListener('click', async () => {
+        const rows = getRowsForMonth(monthSelect.value);
+        if (rows.length === 0) { alert('這個月沒有支出紀錄可以複製。'); return; }
+        // Tab 分隔，貼到 Excel 時每個欄位會自動落在對應的儲存格
+        const tsv = rows.map(r => `${r.date}\t${r.category}\t${r.desc}\t${r.amount}`).join('\n');
+        try {
+          await navigator.clipboard.writeText(tsv);
+          copyBtn.textContent = '✅ 已複製！';
+          setTimeout(() => { copyBtn.textContent = '📋 複製到剪貼簿'; }, 2000);
+        } catch (e) {
+          alert('複製失敗，你的瀏覽器可能不支援自動複製，請改用「下載 Excel 檔」。');
+        }
+      });
+
+      downloadBtn.addEventListener('click', () => {
+        const rows = getRowsForMonth(monthSelect.value);
+        if (rows.length === 0) { alert('這個月沒有支出紀錄可以下載。'); return; }
+        const tableRows = rows.map(r => `
+          <tr>
+            <td>${escapeHtml(r.date)}</td>
+            <td>${escapeHtml(r.category)}</td>
+            <td>${escapeHtml(r.desc)}</td>
+            <td>${r.amount}</td>
+          </tr>`).join('');
+        const html = `
+          <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:x='urn:schemas-microsoft-com:office:excel' xmlns='http://www.w3.org/TR/REC-html40'>
+          <head><meta charset="utf-8"></head>
+          <body>
+            <table border="1">
+              <tr><th>日期</th><th>分類</th><th>項目</th><th>實際支出</th></tr>
+              ${tableRows}
+            </table>
+          </body>
+          </html>
+        `;
+        const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `支出明細_${monthSelect.value}.xls`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
 
     } else if (type === 'checkInHistory') {
       this.dom.modalTitle.textContent = '📅 歷史簽到月曆';
@@ -1104,13 +1239,22 @@ const APP = {
 
     } else if (type === 'quickExpense') {
       this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
+      const categoryListText = EXPENSE_CATEGORIES.map((c, i) => `${i + 1}: ${c}`).join('\n');
       this.state.quickExpenses.forEach((q, idx) => {
         const div = document.createElement('div'); div.className = 'history-card';
-        div.innerHTML = `<p>${q.label} (￥${q.amount})</p><div class="history-actions"><button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button></div>`;
+        div.innerHTML = `<p>${q.label} (￥${q.amount})<br><span class="hint" style="font-size:0.8rem;">分類：${q.category || '未分類'}</span></p><div class="history-actions"><button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button></div>`;
         this.dom.modalBody.appendChild(div);
       });
       const addBtn = document.createElement('button'); addBtn.className = 'btn secondary'; addBtn.textContent = '+ 新增快捷鍵';
-      addBtn.onclick = () => { const label = prompt('按鈕名稱 (例: 咖啡)'); if (!label) return; const amount = Number(prompt('金額')); if (amount) { this.state.quickExpenses.push({ id: Date.now(), label, amount }); this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); } };
+      addBtn.onclick = () => {
+        const label = prompt('按鈕名稱 (例: 咖啡)'); if (!label) return;
+        const amount = Number(prompt('金額'));
+        if (!amount) return;
+        const catNum = Number(prompt(`支出分類（輸入編號 1-12）：\n${categoryListText}`));
+        const category = EXPENSE_CATEGORIES[catNum - 1] || '未分類';
+        this.state.quickExpenses.push({ id: Date.now(), label, amount, category });
+        this.saveState(); this.renderExpenses(); this.openModal('quickExpense');
+      };
       this.dom.modalBody.appendChild(addBtn);
 
     } else if (type === 'note' || type === 'journal') {
@@ -1319,6 +1463,10 @@ const APP = {
     const q = this.state.quickExpenses[index]; 
     const newLabel = prompt('名稱:', q.label); if (newLabel) q.label = newLabel; 
     const newAmt = Number(prompt('金額:', q.amount)); if (newAmt) q.amount = newAmt; 
+    const categoryListText = EXPENSE_CATEGORIES.map((c, i) => `${i + 1}: ${c}`).join('\n');
+    const currentCatIdx = EXPENSE_CATEGORIES.indexOf(q.category) + 1;
+    const catNum = prompt(`支出分類（輸入編號 1-12，留白則不變更）：\n${categoryListText}`, currentCatIdx > 0 ? currentCatIdx : '');
+    if (catNum) { const c = EXPENSE_CATEGORIES[Number(catNum) - 1]; if (c) q.category = c; }
     this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); 
   },
 
