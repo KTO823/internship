@@ -24,7 +24,7 @@ html, body {
   padding: 0;
   min-height: 100%;
   background: var(--bg);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Noto Sans JP', sans-serif;
   color: var(--text);
   line-height: 1.6;
 }
@@ -1027,4 +1027,90 @@ body.theme-shiba-gold .icon-checkin::before { content: '🐾'; }  /* 簽到變�
     font-size: 0.75rem !important; 
     letter-spacing: -0.5px; /* 把字稍微擠緊一點點，看起來更精緻 */
   }
+}
+
+/* ==========================================================================
+   月ナビ（勤務時間・家計簿で共通）
+   ========================================================================== */
+.month-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.month-nav strong { font-size: 1.2rem; }
+.month-nav-btn {
+  font-size: 1.2rem;
+  padding: 8px 16px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* 勤務時間：記録一覧 */
+.hours-month-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 4px;
+  border-bottom: 1px dashed var(--border);
+}
+.hours-month-row:last-child { border-bottom: none; }
+.hours-month-row .month-name { font-weight: 600; }
+.hours-month-row .month-hours { color: var(--primary); font-weight: 700; }
+
+.empty-note {
+  margin: 0;
+  padding: 16px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* 家計簿：カテゴリ別の合計 */
+.category-card { margin-bottom: 24px; }
+.category-card > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1rem;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.category-card > summary::-webkit-details-marker { display: none; }
+.category-card > summary::after {
+  content: '▼';
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+.category-card[open] > summary::after { transform: rotate(180deg); }
+.category-card > #expense-category-list { margin-top: 14px; }
+
+.category-row { padding: 8px 0; }
+.category-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.category-name { font-size: 0.92rem; font-weight: 600; }
+.category-amount { font-weight: 700; white-space: nowrap; }
+.category-amount small { color: var(--text-muted); font-weight: 500; margin-left: 4px; }
+.category-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.category-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+  transition: width 0.35s ease;
 }

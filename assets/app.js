@@ -79,11 +79,11 @@ PWA.registerServiceWorker();
 const PushNotify = {
   async enable() {
     if (!messaging) {
-      alert('這個瀏覽器不支援推播通知（iOS 需先「加入主畫面」安裝成 App 才能收通知）。');
+      alert('このブラウザはプッシュ通知に対応していません（iOSは、先に「ホーム画面に追加」してアプリとしてインストールする必要があります）。');
       return null;
     }
     if (FCM_VAPID_KEY.includes('請填入')) {
-      alert('🚨 尚未設定 VAPID 金鑰，請先在 app.js 頂部填入 FCM_VAPID_KEY');
+      alert('🚨 VAPIDキーが未設定です。app.js の先頭にある FCM_VAPID_KEY を入力してください。');
       return null;
     }
     const permission = await Notification.requestPermission();
@@ -95,7 +95,7 @@ const PushNotify = {
       return token || null;
     } catch (err) {
       console.error('取得推播 token 失敗：', err);
-      alert('開啟通知失敗，請確認網站是用 https 開啟，且瀏覽器支援推播功能。');
+      alert('通知をオンにできませんでした。httpsで開いているか、ブラウザがプッシュ通知に対応しているか確認してください。');
       return null;
     }
   },
@@ -103,7 +103,7 @@ const PushNotify = {
 
 if (messaging) {
   onMessage(messaging, (payload) => {
-    const title = payload.notification?.title || '實習時期提醒';
+    const title = payload.notification?.title || '實習時期｜お知らせ';
     const body = payload.notification?.body || '';
     if (PWA.swRegistration) {
       PWA.swRegistration.showNotification(title, { body, icon: './assets/icons/icon-192.jpg' });
@@ -113,12 +113,30 @@ if (messaging) {
   });
 }
 
-// 記帳分類 —— 跟你自己 Excel 帳本裡「分類清單」那頁的項目一字不差，
-// 這樣 App 匯出的資料才能直接貼進你原本的表格，分類欄位不用再手動對照。
+// 記帳カテゴリ —— 保存される値(key)は、自分のExcel帳簿の「分類清單」と一字一句同じ表記のままにしています。
+// （Excelへ貼り付けたとき、カテゴリ集計の数式などがそのまま使えるように）
+// 画面に表示するときだけ日本語（CATEGORY_JA）に変換します。
 const EXPENSE_CATEGORIES = [
   '1.飲食類-正餐', '2.飲食類-點心', '3.飲食類-飲品', '4.飲食類-其他',
   '5.交通', '6.購物', '7.娛樂', '8.日用品', '9.醫療', '10理髮', '11.保險費', '12.投資',
+  '13.帳單',
 ];
+const CATEGORY_JA = {
+  '1.飲食類-正餐': '1.食費-食事',
+  '2.飲食類-點心': '2.食費-おやつ',
+  '3.飲食類-飲品': '3.食費-飲み物',
+  '4.飲食類-其他': '4.食費-その他',
+  '5.交通': '5.交通費',
+  '6.購物': '6.買い物',
+  '7.娛樂': '7.娯楽',
+  '8.日用品': '8.日用品',
+  '9.醫療': '9.医療',
+  '10理髮': '10.理美容',
+  '11.保險費': '11.保険料',
+  '12.投資': '12.投資',
+  '13.帳單': '13.請求書',
+};
+const categoryLabel = (key) => CATEGORY_JA[key] || key || '未分類';
 
 const STORAGE_KEY = 'intern-dashboard-v9'; 
 
@@ -127,15 +145,14 @@ const APP = {
     user: { isLoggedIn: false, name: '' },
     startDate: '',
     endDate: '',
-    punchMode: 'realtime',
     hoursTargetMode: 'monthly',
     hoursTarget: 160,
     exchangeRate: 0.21,
     currentExpenseMonth: '',
-    punchRecords: {},
+    punchRecords: {},   // 旧「日次打刻」データ（互換用・読み取りのみ）
+    monthlyHours: {},   // 月次の勤務時間 { 'YYYY-MM': 時間 }
     expenses: [],
     notes: [],
-    journals: [],
     galleryImages: [], 
     checkInCount: 0,
     lastCheckInDate: '',
@@ -143,29 +160,31 @@ const APP = {
     currentTheme: 'default',
     unlockedThemes: ['default'],
     reminders: [
-      { id: 'r1', title: '出國前準備：日幣 10 萬圓生活費', date: '2026-07-01' },
+      { id: 'r1', title: '渡航前の準備：生活費として日本円10万円', date: '2026-07-01' },
     ],
     checklist: [
-      { id: 'c1', label: '填寫校外實習機構報到確認單', date: '2026-07-07', checked: false },
-      { id: 'c2', label: '繳交登機證 / 日本實習報到單給QQ', date: '2026-07-31', checked: false },
-      { id: 'c5', label: '繳交前期實習生工作週誌 (共16週)', date: '2026-12-31', checked: false },
-      { id: 'c6', label: '繳交實習影片（至少 5 分鐘）', date: '2027-03-31', checked: false },
-      { id: 'c9', label: '提交回程登機證、心得報告與滿意度表', date: '2027-05-18', checked: false },
-      { id: 'c10', label: '實習成果報告發表', date: '2027-05-27', checked: false },
+      { id: 'c1', label: '学外実習機関への到着確認書を記入', date: '2026-07-07', checked: false },
+      { id: 'c2', label: '搭乗券／日本実習の到着報告書をQQに提出', date: '2026-07-31', checked: false },
+      { id: 'c5', label: '前期実習生の勤務週誌（全16週）を提出', date: '2026-12-31', checked: false },
+      { id: 'c6', label: '実習動画（5分以上）を提出', date: '2027-03-31', checked: false },
+      { id: 'c9', label: '帰国時の搭乗券・感想レポート・満足度アンケートを提出', date: '2027-05-18', checked: false },
+      { id: 'c10', label: '実習成果報告会で発表', date: '2027-05-27', checked: false },
     ],
     quickExpenses: [
-      { id: 'q1', label: '早餐', amount: 450 },
-      { id: 'q2', label: '電車', amount: 180 },
-      { id: 'q3', label: '超市', amount: 1200 },
+      { id: 'q1', label: '朝食', amount: 450, category: '1.飲食類-正餐', mode: 'fixed' },
+      { id: 'q2', label: '電車', amount: 180, category: '5.交通', mode: 'fixed' },
+      { id: 'q3', label: 'スーパー', amount: 1200, category: '8.日用品', mode: 'fixed' },
     ],
   },
   
   firebaseUser: null,
+  hoursViewMonth: '',   // 勤務時間ページで表示中の月（画面状態なので保存はしない）
 
   init() {
     this.cacheDom();
     this.setupListeners();
     this.loadLocalState();
+    this.hoursViewMonth = this.getCurrentMonthStr();
     
     if (!this.state.currentExpenseMonth) {
       const d = new Date();
@@ -181,9 +200,9 @@ const APP = {
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         this.firebaseUser = user;
-        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = `已登入：${user.displayName} (資料同步中...)`;
+        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = `ログイン済み：${user.displayName}（同期中...）`;
         await this.loadCloudState(user);
-        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = `已連線雲端：${user.displayName}`;
+        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = `クラウド接続中：${user.displayName}`;
         if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = user.displayName;
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'none';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'block';
@@ -192,8 +211,8 @@ const APP = {
       } else {
         this.firebaseUser = null;
         this.state.user = { isLoggedIn: false, name: '' };
-        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = '未登入';
-        if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = '未登入';
+        if (this.dom.settingsStatus) this.dom.settingsStatus.textContent = '未ログイン';
+        if (this.dom.sidebarUser) this.dom.sidebarUser.textContent = '未ログイン';
         if (this.dom.settingsLogin) this.dom.settingsLogin.style.display = 'block';
         if (this.dom.sidebarLogout) this.dom.sidebarLogout.style.display = 'none';
         this.saveStateLocally(); 
@@ -223,7 +242,6 @@ const APP = {
       menuToggles: document.querySelectorAll('.btn-menu'),
       sidebar: document.querySelector('.desktop-sidebar'),
       
-      settingsPunchMode: document.getElementById('settings-punch-mode'),
       settingsHoursMode: document.getElementById('settings-hours-mode'),
       settingsHoursTarget: document.getElementById('settings-hours-target'),
       settingsStart: document.getElementById('settings-start'),
@@ -234,13 +252,12 @@ const APP = {
       settingsStatus: document.getElementById('settings-status'),
       sidebarUser: document.getElementById('sidebar-user'),
       
-      secRealtime: document.getElementById('punch-realtime-section'),
-      secManual: document.getElementById('punch-manual-section'),
-      btnIn: document.getElementById('punch-in'),
-      btnOut: document.getElementById('punch-out'),
-      manualInput: document.getElementById('manual-hours-input'),
-      manualSubmit: document.getElementById('manual-hours-submit'),
-      todayPunchList: document.getElementById('today-punch-list'),
+      btnHoursPrev: document.getElementById('btn-hours-prev'),
+      btnHoursNext: document.getElementById('btn-hours-next'),
+      hoursMonthDisplay: document.getElementById('hours-month-display'),
+      hoursMonthInput: document.getElementById('hours-month-input'),
+      hoursMonthSave: document.getElementById('hours-month-save'),
+      hoursMonthList: document.getElementById('hours-month-list'),
       
       btnPrevMonth: document.getElementById('btn-prev-month'),
       btnNextMonth: document.getElementById('btn-next-month'),
@@ -299,7 +316,6 @@ const APP = {
       });
     }
 
-    if (this.dom.settingsPunchMode) this.dom.settingsPunchMode.addEventListener('change', (e) => { this.state.punchMode = e.target.value; this.saveState(); this.renderHoursPage(); });
     if (this.dom.settingsHoursMode) this.dom.settingsHoursMode.addEventListener('change', (e) => { this.state.hoursTargetMode = e.target.value; this.saveState(); this.renderHoursPage(); this.updateDashboard(); });
     if (this.dom.settingsHoursTarget) this.dom.settingsHoursTarget.addEventListener('change', (e) => { this.state.hoursTarget = Number(e.target.value) || 160; this.saveState(); this.renderHoursPage(); this.updateDashboard(); });
     if (this.dom.settingsStart) this.dom.settingsStart.addEventListener('change', (e) => { this.state.startDate = e.target.value; this.saveState(); this.updateDashboard(); });
@@ -309,21 +325,21 @@ const APP = {
       // 如果之前已經拿過權限且有 token，直接顯示完成狀態
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && this.state.fcmToken) {
         this.dom.btnEnableNotify.style.display = 'none';
-        if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '✅ 已開啟，提醒到期時會推播給你';
+        if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '✅ オン済み：期限が近づくと通知が届きます';
       }
       this.dom.btnEnableNotify.addEventListener('click', async () => {
-        this.dom.btnEnableNotify.textContent = '開啟中...';
+        this.dom.btnEnableNotify.textContent = 'オンにしています...';
         const result = await PushNotify.enable();
-        this.dom.btnEnableNotify.textContent = '開啟';
+        this.dom.btnEnableNotify.textContent = 'オンにする';
         if (result === 'denied') {
-          if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '⚠️ 通知權限被封鎖，請到瀏覽器設定手動開啟';
+          if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '⚠️ 通知がブロックされています。ブラウザの設定から許可してください';
           return;
         }
         if (result) {
           this.state.fcmToken = result;
           this.saveState();
           this.dom.btnEnableNotify.style.display = 'none';
-          if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '✅ 已開啟，提醒到期時會推播給你';
+          if (this.dom.notifyRowDesc) this.dom.notifyRowDesc.textContent = '✅ オン済み：期限が近づくと通知が届きます';
         }
       });
     }
@@ -336,19 +352,19 @@ const APP = {
       this.dom.installRow.style.display = 'flex';
       if (mode === 'android') {
         this.dom.btnInstallApp.style.display = 'inline-flex';
-        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = '安裝到主畫面，開啟更快、可離線查看';
+        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = 'ホーム画面に追加すると、起動が速くオフラインでも見られます';
       } else if (mode === 'ios') {
         this.dom.btnInstallApp.style.display = 'none';
-        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = '點瀏覽器下方「分享」→「加入主畫面」';
+        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = 'ブラウザ下部の「共有」→「ホーム画面に追加」をタップ';
       } else if (mode === 'installed') {
         this.dom.btnInstallApp.style.display = 'none';
-        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = '✅ 已安裝完成，可從主畫面直接開啟';
+        if (this.dom.installRowDesc) this.dom.installRowDesc.textContent = '✅ インストール済み：ホーム画面から直接開けます';
       }
     });
 
     if (this.dom.settingsLogin) {
       this.dom.settingsLogin.addEventListener('click', async () => {
-        try { await signInWithPopup(auth, provider); } catch (error) { alert('登入失敗：' + error.message); }
+        try { await signInWithPopup(auth, provider); } catch (error) { alert('ログインに失敗しました：' + error.message); }
       });
     }
     const guideLoginBtn = document.getElementById('guide-login-btn');
@@ -357,24 +373,24 @@ const APP = {
         try { 
           await signInWithPopup(auth, provider); 
         } catch (error) { 
-          alert('登入失敗：' + error.message); 
+          alert('ログインに失敗しました：' + error.message); 
         }
       });
     }
 
     if (this.dom.sidebarLogout) {
       this.dom.sidebarLogout.addEventListener('click', async () => {
-        if (confirm('確定要登出嗎？登出後將無法同步雲端資料。')) {
-          await signOut(auth); alert('已登出');
+        if (confirm('ログアウトしますか？ログアウトするとクラウド同期ができなくなります。')) {
+          await signOut(auth); alert('ログアウトしました');
         }
       });
     }
 
-    if (this.dom.btnHoursHelp) this.dom.btnHoursHelp.addEventListener('click', () => { alert('【每月目標】\n進度只算當月累積。\n\n【總時數目標】\n進度會累加實習期間的所有時數。'); });
+    if (this.dom.btnHoursHelp) this.dom.btnHoursHelp.addEventListener('click', () => { alert('【月ごとの目標】\n進捗は当月の累計だけで計算します。\n\n【累計の目標】\n実習期間中のすべての時間を合計して進捗を計算します。'); });
 
-    if (this.dom.btnIn) this.dom.btnIn.addEventListener('click', () => this.handleRealtimePunch('in'));
-    if (this.dom.btnOut) this.dom.btnOut.addEventListener('click', () => this.handleRealtimePunch('out'));
-    if (this.dom.manualSubmit) this.dom.manualSubmit.addEventListener('click', () => this.handleManualPunch());
+    if (this.dom.btnHoursPrev) this.dom.btnHoursPrev.addEventListener('click', () => this.changeHoursMonth(-1));
+    if (this.dom.btnHoursNext) this.dom.btnHoursNext.addEventListener('click', () => this.changeHoursMonth(1));
+    if (this.dom.hoursMonthSave) this.dom.hoursMonthSave.addEventListener('click', () => this.saveMonthHours());
 
     if (this.dom.btnPrevMonth) this.dom.btnPrevMonth.addEventListener('click', () => this.changeExpenseMonth(-1));
     if (this.dom.btnNextMonth) this.dom.btnNextMonth.addEventListener('click', () => this.changeExpenseMonth(1));
@@ -404,45 +420,14 @@ const APP = {
           this.checkShibaEgg(text); 
           noteInput.value = ''; 
           this.saveState(); 
-          alert('備註已儲存'); 
+          alert('メモを保存しました'); 
         }
       });
     }
 
-    const saveJournalBtn = document.getElementById('save-journal');
-    if (saveJournalBtn) {
-      saveJournalBtn.addEventListener('click', () => {
-        // 🌟 同時抓取兩個輸入框的內容
-        const contentInput = document.getElementById('journal-content');
-        const reflectionInput = document.getElementById('journal-reflection');
-        const content = contentInput.value.trim();
-        const reflection = reflectionInput.value.trim();
-        
-        if (content || reflection) { 
-          // 🌟 存入兩個不同的屬性
-          this.state.journals.push({ 
-            id: Date.now(), 
-            week: this.getWeekNum(), 
-            content: content, 
-            reflection: reflection, 
-            date: this.getNowString() 
-          }); 
-          
-          this.checkShibaEgg(content + reflection); 
-          contentInput.value = ''; 
-          reflectionInput.value = ''; 
-          this.saveState(); 
-          alert('本週週誌已儲存！'); 
-        } else {
-          alert('請至少填寫一欄內容喔！');
-        }
-      });
-    }
-
-    // 🌟 綁定剛剛新增的 Word 匯出按鈕
-    const btnExportWord = document.getElementById('btn-export-word');
-    if (btnExportWord) {
-      btnExportWord.addEventListener('click', () => this.exportAllToWord());
+    const clearNoteBtn = document.getElementById('clear-note');
+    if (clearNoteBtn) {
+      clearNoteBtn.addEventListener('click', () => { document.getElementById('quick-note').value = ''; });
     }
 
     const addReminderBtn = document.getElementById('add-reminder');
@@ -459,10 +444,8 @@ const APP = {
       if (btn) btn.addEventListener('click', () => this.openModal(type));
     };
     
-    bindModal('btn-manage-punch', 'punch');
     bindModal('btn-manage-expense', 'expense');
     bindModal('btn-manage-note', 'note');
-    bindModal('btn-manage-journal', 'journal');
     bindModal('btn-view-checkin-history', 'checkInHistory');
     bindModal('btn-manage-checklist', 'manageChecklist');
     bindModal('btn-export-expense-month', 'exportExpenseMonth');
@@ -476,7 +459,7 @@ const APP = {
   },
 
   getNowString() { 
-    return new Date().toLocaleString('zh-Hant', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); 
+    return new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); 
   },
   
   getTodayStr() { 
@@ -485,10 +468,19 @@ const APP = {
   },
   
   getWeekNum() { 
-    if (!this.state.startDate) return '未設定';
+    if (!this.state.startDate) return 1; // 実習開始日が未設定なら第1週として扱う
     const msDiff = new Date() - new Date(this.state.startDate);
     const weekNum = Math.floor(msDiff / 86400000 / 7) + 1; 
-    return weekNum > 0 ? weekNum : 1; // 🌟 如果還沒開工就提早寫，一律先算在第 1 週
+    return weekNum > 0 ? weekNum : 1;
+  },
+
+  // 支出が属する月（isoMonth が無い古いデータは日付から判定）
+  getExpenseMonth(e) {
+    return e.isoMonth || (e.date ? e.date.slice(0, 7) : '');
+  },
+
+  formatYen(n) {
+    return `￥${Number(n).toLocaleString('ja-JP')}`;
   },
 
   // 跟 getWeekNum() 邏輯一樣，但可以指定任何一個日期（例如照片的拍攝/上傳日），
@@ -500,43 +492,102 @@ const APP = {
     return weekNum > 0 ? weekNum : 1;
   },
 
-  handleRealtimePunch(type) {
-    const today = this.getTodayStr();
-    const timeStr = new Date().toTimeString().slice(0,5);
-    if (!this.state.punchRecords[today]) this.state.punchRecords[today] = { records: [], manualTotal: 0 };
-    const recs = this.state.punchRecords[today].records;
-    
-    if (type === 'in') recs.push({ in: timeStr, out: null });
-    else if (type === 'out' && recs.length > 0) recs[recs.length - 1].out = timeStr;
-    
-    this.saveState(); this.renderHoursPage();
+  // ===== 勤務時間（月次記録） =====
+  getCurrentMonthStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   },
-  
-  handleManualPunch() {
-    const hours = Number(this.dom.manualInput.value);
-    if (hours > 0) {
-      const today = this.getTodayStr();
-      if (!this.state.punchRecords[today]) this.state.punchRecords[today] = { records: [], manualTotal: 0 };
-      this.state.punchRecords[today].manualTotal = hours; 
-      this.saveState(); this.renderHoursPage(); this.dom.manualInput.value = ''; alert('今日總時數已紀錄！');
-    }
+
+  // 旧バージョンの「日次打刻」データから、その月の合計時間を計算（互換用）
+  getLegacyMonthHours(month) {
+    let total = 0;
+    const records = this.state.punchRecords || {};
+    Object.keys(records).forEach(date => {
+      if (date.slice(0, 7) !== month) return;
+      const day = records[date];
+      if (day.manualTotal > 0) { total += day.manualTotal; return; }
+      (day.records || []).forEach(r => {
+        if (r.in && r.out) {
+          const [ih, im] = r.in.split(':').map(Number);
+          const [oh, om] = r.out.split(':').map(Number);
+          total += Math.max(0, (oh * 60 + om) - (ih * 60 + im)) / 60;
+        }
+      });
+    });
+    return total;
+  },
+
+  // 記録のある月の一覧（月次入力 + 旧データ由来の月）
+  getHoursMonths() {
+    const months = new Set();
+    const mh = this.state.monthlyHours || {};
+    Object.keys(mh).forEach(m => { if (mh[m] !== null) months.add(m); });
+    Object.keys(this.state.punchRecords || {}).forEach(date => {
+      const m = date.slice(0, 7);
+      if (!(m in mh) && this.getLegacyMonthHours(m) > 0) months.add(m);
+    });
+    return [...months].sort();
+  },
+
+  getMonthHours(month) {
+    const mh = this.state.monthlyHours || {};
+    if (month in mh) return Number(mh[month]) || 0;
+    return this.getLegacyMonthHours(month);
   },
 
   calcTotalHours() {
-    let total = 0;
-    Object.values(this.state.punchRecords).forEach(day => {
-      if (day.manualTotal > 0) total += day.manualTotal; 
-      else if (day.records) {
-        day.records.forEach(r => {
-          if (r.out) {
-            const [ih, im] = r.in.split(':').map(Number); 
-            const [oh, om] = r.out.split(':').map(Number);
-            total += Math.max(0, (oh * 60 + om) - (ih * 60 + im)) / 60;
-          }
-        });
-      }
-    });
-    return total;
+    return this.getHoursMonths().reduce((sum, m) => sum + this.getMonthHours(m), 0);
+  },
+
+  // 目標タイプに応じた「達成値」：月ごと→今月の時間 / 累計→全期間の合計
+  getHoursProgressValue() {
+    return this.state.hoursTargetMode === 'total'
+      ? this.calcTotalHours()
+      : this.getMonthHours(this.getCurrentMonthStr());
+  },
+
+  changeHoursMonth(offset) {
+    let [year, month] = this.hoursViewMonth.split('-').map(Number);
+    month += offset;
+    if (month > 12) { month = 1; year++; }
+    else if (month < 1) { month = 12; year--; }
+    this.hoursViewMonth = `${year}-${String(month).padStart(2, '0')}`;
+    this.renderHoursPage();
+  },
+
+  saveMonthHours() {
+    const input = this.dom.hoursMonthInput;
+    const hours = Number(input.value);
+    if (input.value === '' || isNaN(hours) || hours < 0) { alert('0以上の数値を入力してください。'); return; }
+    if (hours > 744) { alert('1か月の最大は744時間です。入力内容を確認してください。'); return; }
+    if (!this.state.monthlyHours) this.state.monthlyHours = {};
+    this.state.monthlyHours[this.hoursViewMonth] = Math.round(hours * 10) / 10;
+    this.saveState();
+    this.renderHoursPage();
+    const btn = this.dom.hoursMonthSave;
+    if (btn) {
+      btn.textContent = '✅ 保存しました';
+      setTimeout(() => { btn.textContent = 'この月の時間を保存'; }, 1500);
+    }
+  },
+
+  editHoursMonth(month) {
+    this.hoursViewMonth = month;
+    this.renderHoursPage();
+    if (this.dom.hoursMonthInput) {
+      this.dom.hoursMonthInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.dom.hoursMonthInput.focus();
+    }
+  },
+
+  deleteHoursMonth(month) {
+    if (!confirm('この月の勤務時間の記録を削除しますか？')) return;
+    if (!this.state.monthlyHours) this.state.monthlyHours = {};
+    // 旧データ由来の月は null で「削除済み」を記録（残さないと旧データが再び表示されてしまうため）
+    if (this.getLegacyMonthHours(month) > 0) this.state.monthlyHours[month] = null;
+    else delete this.state.monthlyHours[month];
+    this.saveState();
+    this.renderHoursPage();
   },
 
   changeExpenseMonth(offset) {
@@ -581,15 +632,15 @@ const APP = {
   showDailyCheckInPopup() {
     if (!this.dom.modal) return;
     this.dom.modal.classList.add('active');
-    this.dom.modalTitle.textContent = '🌟 每日簽到';
+    this.dom.modalTitle.textContent = '🌟 毎日のチェックイン';
     
     this.dom.modalBody.innerHTML = `
       <div style="text-align: center; padding: 20px 10px;">
         <p style="margin-bottom: 24px; font-size: 1.1rem; color: var(--text); line-height: 1.6;">
-          日安！新的一天開始了！<br>
-          記得完成今日簽到，累積專屬主題解鎖進度喔！
+          おはようございます！新しい一日の始まりです！<br>
+          今日のチェックインを済ませて、限定テーマの解放を進めましょう！
         </p>
-        <button class="btn" id="btn-modal-checkin" style="width: 100%; font-size: 1.1rem; padding: 12px;">完成簽到 <span class="dynamic-icon icon-checkin"></span></button>
+        <button class="btn" id="btn-modal-checkin" style="width: 100%; font-size: 1.1rem; padding: 12px;">チェックインする <span class="dynamic-icon icon-checkin"></span></button>
       </div>
     `;
 
@@ -611,23 +662,23 @@ const APP = {
       this.state.checkInHistory.push(today);
     }
     
-    let msg = `簽到成功！目前已累計簽到 ${this.state.checkInCount} 天！`;
+    let msg = `チェックイン完了！累計 ${this.state.checkInCount} 日になりました！`;
     
     if (this.state.checkInCount >= 14 && !this.state.unlockedThemes.includes('theme-monochrome')) {
       this.state.unlockedThemes.push('theme-monochrome');
-      msg += '\n\n🎉 達成 14 天簽到！已解鎖主題「簡約黑白」！';
+      msg += '\n\n🎉 14日チェックイン達成！テーマ「シンプルモノクロ」が解放されました！';
     }
     if (this.state.checkInCount >= 50 && !this.state.unlockedThemes.includes('theme-neon-sakura')) {
       this.state.unlockedThemes.push('theme-neon-sakura');
-      msg += '\n\n🎉 達成 50 天簽到！已解鎖主題「夜櫻霓虹」！';
+      msg += '\n\n🎉 50日チェックイン達成！テーマ「夜桜ネオン」が解放されました！';
     }
     if (this.state.checkInCount >= 100 && !this.state.unlockedThemes.includes('theme-makie-gold')) {
       this.state.unlockedThemes.push('theme-makie-gold');
-      msg += '\n\n🎉 達成 100 天簽到！已解鎖主題「蒔繪金箔」！';
+      msg += '\n\n🎉 100日チェックイン達成！テーマ「蒔絵金箔」が解放されました！';
     }
     if (this.state.checkInCount >= 200 && !this.state.unlockedThemes.includes('theme-aurora-stage')) {
       this.state.unlockedThemes.push('theme-aurora-stage');
-      msg += '\n\n🎉 達成 200 天簽到！已解鎖主題「幻光星海」！';
+      msg += '\n\n🎉 200日チェックイン達成！テーマ「幻光星海」が解放されました！';
     }
     
     alert(msg);
@@ -637,11 +688,11 @@ const APP = {
 
   checkShibaEgg(text) {
     if (this.state.unlockedThemes.includes('theme-shiba-gold')) return;
-    const dogKeywords = ['狗', '犬', 'dog', '柴犬', 'shiba', '汪汪', '小狗', '因', 'puppy'];
+    const dogKeywords = ['狗', '犬', 'dog', '柴犬', 'shiba', '汪汪', '小狗', '因', 'puppy', 'いぬ', 'イヌ', 'わんこ', 'ワンコ', 'わんわん', 'しば'];
     const hasKeyword = dogKeywords.some(kw => text.toLowerCase().includes(kw));
     if (hasKeyword) {
       this.state.unlockedThemes.push('theme-shiba-gold');
-      alert('🐾 隱藏彩蛋觸發！\n偵測到紀錄中包含狗的相關文字！已成功解鎖特殊單獨主題：「暖心柴柴版」！🐶✨\n可以去設定頁面切換看看囉！');
+      alert('🐾 隠しイースターエッグ発動！\n記録に犬に関する言葉が含まれていました！特別テーマ「ほっこり柴犬版」が解放されました！🐶✨\n設定ページで切り替えてみてください！');
     }
   },
 
@@ -653,7 +704,6 @@ const APP = {
   },
 
   renderAll() {
-    if (this.dom.settingsPunchMode) this.dom.settingsPunchMode.value = this.state.punchMode;
     if (this.dom.settingsHoursMode) this.dom.settingsHoursMode.value = this.state.hoursTargetMode;
     if (this.dom.settingsHoursTarget) this.dom.settingsHoursTarget.value = this.state.hoursTarget;
     if (this.dom.settingsStart) this.dom.settingsStart.value = this.state.startDate;
@@ -672,27 +722,27 @@ const APP = {
   renderCheckInHistoryUI() {
     if (!this.dom.historyCheckinCount || !this.dom.historyLastCheckin) return;
     this.dom.historyCheckinCount.textContent = this.state.checkInCount || 0;
-    this.dom.historyLastCheckin.textContent = this.state.lastCheckInDate || '尚無紀錄';
+    this.dom.historyLastCheckin.textContent = this.state.lastCheckInDate || 'なし';
   },
 
   showGuidePopup() {
     if (!this.dom.modal) return;
     this.dom.modal.classList.add('active');
-    this.dom.modalTitle.textContent = '👋 歡迎使用實習時期';
+    this.dom.modalTitle.textContent = '👋 實習時期へようこそ';
     
     let loginHtml = '';
     if (!this.firebaseUser) {
       loginHtml = `
         <div style="margin-top: 20px; padding: 16px; background: rgba(239, 68, 68, 0.08); border-radius: 12px; border: 1px dashed var(--danger); text-align: center;">
-          <p style="margin: 0 0 8px 0; color: var(--danger); font-size: 1rem; font-weight: 700;">⚠️ 尚未登入雲端帳號</p>
-          <p style="margin: 0 0 12px 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">目前資料僅保存在本機，若清除瀏覽器紀錄將會遺失。<br>強烈建議登入以啟用自動雲端備份！</p>
-          <button class="btn" id="modal-guide-login" style="background: var(--danger); color: white; width: 100%; border: none;">立即登入 Google</button>
+          <p style="margin: 0 0 8px 0; color: var(--danger); font-size: 1rem; font-weight: 700;">⚠️ クラウドアカウントに未ログイン</p>
+          <p style="margin: 0 0 12px 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">データは端末にのみ保存されており、ブラウザの履歴を消すと失われます。<br>ログインして自動クラウドバックアップを有効にしましょう！</p>
+          <button class="btn" id="modal-guide-login" style="background: var(--danger); color: white; width: 100%; border: none;">今すぐGoogleでログイン</button>
         </div>
       `;
     } else {
       loginHtml = `
         <div style="margin-top: 20px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; text-align: center;">
-          <p style="margin: 0; color: #10b981; font-weight: 700;">✅ 已登入雲端，資料安全同步中</p>
+          <p style="margin: 0; color: #10b981; font-weight: 700;">✅ ログイン済み：データはクラウドで安全に同期されています</p>
         </div>
       `;
     }
@@ -700,30 +750,30 @@ const APP = {
     this.dom.modalBody.innerHTML = `
       <div style="padding: 10px 4px;">
         <p style="font-size: 0.95rem; color: var(--text); line-height: 1.8; margin-top: 0;">
-          這是一款專為實習生打造的紀錄工具：<br><br>
+          実習生のために作られた記録ツールです：<br><br>
           
           <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
             <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">⏳</span> 
-            <span><b style="white-space:nowrap;">工時打卡</b>：自動計算總工時與進度。</span>
+            <span><b style="white-space:nowrap;">勤務時間</b>：月ごとの合計時間を記録し、目標までの進捗を確認。</span>
           </span>
           
           <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
             <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">💰</span> 
-            <span><b style="white-space:nowrap;">記帳系統</b>：追蹤花費，自動換算台幣。</span>
+            <span><b style="white-space:nowrap;">家計簿</b>：支出をカテゴリ別に集計し、台湾ドルへ自動換算。</span>
           </span>
           
           <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
             <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">📝</span> 
-            <span><b style="white-space:nowrap;">實習週誌</b>：隨手記錄，一鍵匯出報告。</span>
+            <span><b style="white-space:nowrap;">メモ・アルバム</b>：メモや写真を記録し、写真は週ごとにWordへ出力。</span>
           </span>
           
           <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
             <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">✅</span> 
-            <span><b style="white-space:nowrap;">檢查表</b>：提前30日告知，不遺漏事項。</span>
+            <span><b style="white-space:nowrap;">チェックリスト</b>：期限の30日前からお知らせ。</span>
           </span>
         </p>
         ${loginHtml}
-        <button class="btn secondary" id="btn-guide-close" style="width: 100%; margin-top: 16px;">我知道了</button>
+        <button class="btn secondary" id="btn-guide-close" style="width: 100%; margin-top: 16px;">わかりました</button>
       </div>
     `;
 
@@ -735,7 +785,7 @@ const APP = {
           await signInWithPopup(auth, provider); 
           this.showGuidePopup(); // 登入成功後，重新整理彈窗變成「已登入」狀態
         } catch (error) { 
-          alert('登入失敗：' + error.message); 
+          alert('ログインに失敗しました：' + error.message); 
         }
       });
     }
@@ -757,18 +807,18 @@ const APP = {
     if (!this.dom.themeSelect) return;
     this.dom.themeSelect.innerHTML = '';
     const themeOptions = [
-      { value: 'default', label: '預設標準藍 (原始外觀)' },
-      { value: 'theme-monochrome', label: '🔒 14天簽到：簡約黑白' },
-      { value: 'theme-neon-sakura', label: '🔒 50天簽到：夜櫻霓虹' },
-      { value: 'theme-makie-gold', label: '🔒 100天簽到：蒔繪金箔' },
-      { value: 'theme-aurora-stage', label: '🔒 200天簽到：幻光星海' },
-      { value: 'theme-shiba-gold', label: '🐾 特殊彩蛋：暖心柴柴版 🐶' },
+      { value: 'default', label: 'デフォルト（スタンダードブルー）' },
+      { value: 'theme-monochrome', label: '🔒 14日チェックイン：シンプルモノクロ' },
+      { value: 'theme-neon-sakura', label: '🔒 50日チェックイン：夜桜ネオン' },
+      { value: 'theme-makie-gold', label: '🔒 100日チェックイン：蒔絵金箔' },
+      { value: 'theme-aurora-stage', label: '🔒 200日チェックイン：幻光星海' },
+      { value: 'theme-shiba-gold', label: '🐾 特別イースターエッグ：ほっこり柴犬版 🐶' },
     ];
     themeOptions.forEach(opt => {
       if (opt.value === 'default' || this.state.unlockedThemes.includes(opt.value)) {
         const o = document.createElement('option');
         o.value = opt.value;
-        o.textContent = opt.label.replace('🔒 ', '✨ 已解鎖：');
+        o.textContent = opt.label.replace('🔒 ', '✨ 解放済み：');
         if (this.state.currentTheme === opt.value) o.selected = true;
         this.dom.themeSelect.appendChild(o);
       }
@@ -776,31 +826,52 @@ const APP = {
   },
 
   renderHoursPage() {
-    if (!this.dom.secRealtime || !this.dom.secManual) return;
-    if (this.state.punchMode === 'manual') {
-      this.dom.secRealtime.style.display = 'none'; this.dom.secManual.style.display = 'block';
-    } else {
-      this.dom.secRealtime.style.display = 'block'; this.dom.secManual.style.display = 'none';
+    const target = this.state.hoursTarget || 160;
+    const isTotal = this.state.hoursTargetMode === 'total';
+    const value = this.getHoursProgressValue();
+    const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+
+    // 上部のサマリーカード
+    setText('hours-display', value.toFixed(1));
+    setText('hours-target-label', isTotal ? '累計の勤務時間' : '今月の勤務時間');
+    setText('hours-hint', `目標 ${target} 時間`);
+
+    // ホームの進捗バー
+    const pct = Math.min(100, Math.round((value / target) * 100));
+    setText('progress-hours-label', isTotal ? '勤務時間（累計）' : '今月の勤務時間');
+    setText('progress-hours-text', `${value.toFixed(1)}/${target} 時間`);
+    const bar = document.getElementById('progress-hours');
+    if (bar) bar.style.width = `${pct}%`;
+
+    // 月ナビ & 入力欄
+    if (this.dom.hoursMonthDisplay && this.hoursViewMonth) {
+      const [y, m] = this.hoursViewMonth.split('-');
+      this.dom.hoursMonthDisplay.textContent = `${y}年${parseInt(m)}月`;
+    }
+    const input = this.dom.hoursMonthInput;
+    if (input && document.activeElement !== input) {
+      const has = this.getHoursMonths().includes(this.hoursViewMonth);
+      input.value = has ? String(Math.round(this.getMonthHours(this.hoursViewMonth) * 10) / 10) : '';
     }
 
-    const today = this.getTodayStr();
-    const todayData = this.state.punchRecords[today];
-    let punchHtml = '<p style="margin:0; font-size:0.9rem; color:var(--text-muted);">今日狀態：</p>';
-    
-    if (todayData) {
-      if (todayData.manualTotal > 0) punchHtml += `<strong>已手動紀錄 ${todayData.manualTotal} 小時</strong>`;
-      else todayData.records.forEach(r => { punchHtml += `<div>進: ${r.in} - 出: ${r.out || '進行中'}</div>`; });
-    } else { punchHtml += '尚未記錄'; }
-    this.dom.todayPunchList.innerHTML = punchHtml;
-
-    const total = this.calcTotalHours();
-    if (document.getElementById('hours-display')) document.getElementById('hours-display').textContent = total.toFixed(1);
-    if (document.getElementById('hours-target-label')) document.getElementById('hours-target-label').textContent = this.state.hoursTargetMode === 'total' ? '總工時目標' : '月度工時目標';
-    if (document.getElementById('hours-hint')) document.getElementById('hours-hint').textContent = `目標 ${this.state.hoursTarget} 小時`;
-    
-    const pct = Math.min(100, Math.round((total / this.state.hoursTarget) * 100));
-    if (document.getElementById('progress-hours-text')) document.getElementById('progress-hours-text').textContent = `${total.toFixed(1)}/${this.state.hoursTarget} 小時`;
-    if (document.getElementById('progress-hours')) document.getElementById('progress-hours').style.width = `${pct}%`;
+    // 記録一覧
+    if (this.dom.hoursMonthList) {
+      const months = this.getHoursMonths().reverse();
+      if (months.length === 0) {
+        this.dom.hoursMonthList.innerHTML = '<p class="empty-note">まだ記録がありません。</p>';
+      } else {
+        this.dom.hoursMonthList.innerHTML = months.map(m => {
+          const [y, mo] = m.split('-');
+          return `<div class="hours-month-row">
+            <div><div class="month-name">${y}年${parseInt(mo)}月</div><div class="month-hours">${this.getMonthHours(m).toFixed(1)} 時間</div></div>
+            <div>
+              <button class="btn-icon" style="color:var(--primary); font-size:1.1rem; cursor:pointer;" aria-label="編集" onclick="APP.editHoursMonth('${m}')">✏️</button>
+              <button class="btn-icon" style="color:var(--danger); font-size:1.1rem; cursor:pointer;" aria-label="削除" onclick="APP.deleteHoursMonth('${m}')">🗑️</button>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
   },
 
   renderExpenses() {
@@ -809,63 +880,59 @@ const APP = {
       this.dom.monthDisplay.textContent = `${year}年${parseInt(month)}月`;
     }
 
-    const monthlyData = this.state.expenses.filter(e => {
-      const eMonth = e.isoMonth || this.state.currentExpenseMonth;
-      return eMonth === this.state.currentExpenseMonth;
-    });
+    const monthlyData = this.state.expenses.filter(e => this.getExpenseMonth(e) === this.state.currentExpenseMonth);
 
     const totalJpy = monthlyData.reduce((sum, e) => sum + e.amount, 0);
     const totalNtd = Math.round(totalJpy * this.state.exchangeRate);
     
-    if (document.getElementById('expense-jpy')) document.getElementById('expense-jpy').textContent = `￥${totalJpy}`;
-    if (document.getElementById('expense-ntd')) document.getElementById('expense-ntd').textContent = `NT$${totalNtd}`;
+    if (document.getElementById('expense-jpy')) document.getElementById('expense-jpy').textContent = this.formatYen(totalJpy);
+    if (document.getElementById('expense-ntd')) document.getElementById('expense-ntd').textContent = `NT$${totalNtd.toLocaleString('ja-JP')}`;
 
-    // ⬇️ 核心升級：將明細依照「日期」打包成精美卡片
+    this.renderCategoryBreakdown(monthlyData, totalJpy);
+
+    // 日付ごとにまとめたカード表示
     if (this.dom.monthlyExpenseList) {
       this.dom.monthlyExpenseList.innerHTML = '';
       
       if (monthlyData.length === 0) {
-        this.dom.monthlyExpenseList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding:20px 0;">本月尚無明細</p>';
+        this.dom.monthlyExpenseList.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding:20px 0;">この月の明細はありません</p>';
       } else {
-        // 先將當月資料依據具體日期 (e.date) 進行分組
         const groupedByDate = {};
         monthlyData.forEach(e => {
           if (!groupedByDate[e.date]) groupedByDate[e.date] = [];
           groupedByDate[e.date].push(e);
         });
 
-        // 取出所有日期並由新到舊排序
+        // 新しい日付が上
         const sortedDates = Object.keys(groupedByDate).sort().reverse();
 
         sortedDates.forEach(dateStr => {
           const d = new Date(dateStr);
-          const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+          const weekdays = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
           const weekdayStr = isNaN(d.getTime()) ? '' : weekdays[d.getDay()];
           const dayTotal = groupedByDate[dateStr].reduce((sum, item) => sum + item.amount, 0);
 
           const groupDiv = document.createElement('div');
           groupDiv.className = 'expense-day-group';
           
-          // 卡片頂部的日期與單日總計
           let html = `
             <div class="expense-day-header">
                 <span>${dateStr} ${weekdayStr}</span>
-                <span class="expense-day-total">￥-${dayTotal}</span>
+                <span class="expense-day-total">￥-${dayTotal.toLocaleString('ja-JP')}</span>
             </div>
           `;
           
-          // 卡片內部的品項清單
           groupedByDate[dateStr].forEach(e => {
-            const trueIdx = this.state.expenses.indexOf(e); // 抓取真實索引供刪除用
+            const trueIdx = this.state.expenses.indexOf(e); // 削除用に元の配列での位置を取得
             html += `
               <div class="expense-item">
                 <div style="display:flex; flex-direction:column; gap:2px;">
                   <div style="font-weight:600; font-size:1rem; color:var(--text);">${escapeHtml(e.desc)}</div>
-                  <div style="font-size:0.78rem; color:var(--text-muted);">${escapeHtml(e.category || '未分類')}</div>
+                  <div style="font-size:0.78rem; color:var(--text-muted);">${escapeHtml(categoryLabel(e.category))}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
-                  <div style="font-weight:700; font-size:1rem; color:var(--text);">￥-${e.amount}</div>
-                  <button class="btn-icon" style="color:var(--danger); font-size:1.1rem; cursor:pointer;" onclick="APP.deleteItem('expenses', ${trueIdx})">🗑️</button>
+                  <div style="font-weight:700; font-size:1rem; color:var(--text);">￥-${e.amount.toLocaleString('ja-JP')}</div>
+                  <button class="btn-icon" style="color:var(--danger); font-size:1.1rem; cursor:pointer;" aria-label="削除" onclick="APP.deleteItem('expenses', ${trueIdx})">🗑️</button>
                 </div>
               </div>
             `;
@@ -876,6 +943,37 @@ const APP = {
         });
       }
     }
+
+    // ホームの「今月の支出合計」も同期させる
+    this.updateDashboard();
+  },
+
+  // カテゴリ別の合計（金額の大きい順）
+  renderCategoryBreakdown(monthlyData, totalJpy) {
+    const box = document.getElementById('expense-category-list');
+    if (!box) return;
+    if (monthlyData.length === 0) {
+      box.innerHTML = '<p class="empty-note">この月の支出はまだありません。</p>';
+      return;
+    }
+    const sums = {};
+    monthlyData.forEach(e => {
+      const key = e.category || '未分類';
+      sums[key] = (sums[key] || 0) + e.amount;
+    });
+    box.innerHTML = Object.entries(sums)
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, amount]) => {
+        const pct = totalJpy > 0 ? Math.round((amount / totalJpy) * 100) : 0;
+        return `
+          <div class="category-row">
+            <div class="category-row-top">
+              <span class="category-name">${escapeHtml(categoryLabel(key))}</span>
+              <span class="category-amount">${this.formatYen(amount)}<small>${pct}%</small></span>
+            </div>
+            <div class="category-bar"><span style="width:${pct}%"></span></div>
+          </div>`;
+      }).join('');
   },
 
   renderReminders() {
@@ -887,7 +985,7 @@ const APP = {
       const msDiff = new Date(r.date) - new Date();
       const d = Math.ceil(msDiff / 86400000);
       const isUrgent = (d <= 30 && d >= 0);
-      const status = d < 0 ? '已過期' : (d === 0 ? '今天截止' : `剩 ${d} 天`);
+      const status = d < 0 ? '期限切れ' : (d === 0 ? '本日締切' : `あと ${d} 日`);
       
       const row = document.createElement('div'); 
       row.className = `reminder-item ${isUrgent ? 'urgent' : ''}`;
@@ -907,7 +1005,7 @@ const APP = {
       const msDiff = new Date(c.date) - new Date();
       const d = Math.ceil(msDiff / 86400000);
       const isUrgent = (!c.checked && d <= 30 && d >= 0); 
-      const status = d < 0 ? '已過期' : (d === 0 ? '今天截止' : `剩 ${d} 天 (${c.date})`);
+      const status = d < 0 ? '期限切れ' : (d === 0 ? '本日締切' : `あと ${d} 日 (${c.date})`);
 
       const lbl = document.createElement('label'); 
       lbl.className = `checklist-item ${isUrgent ? 'urgent' : ''}`;
@@ -916,11 +1014,20 @@ const APP = {
       cl.appendChild(lbl);
     });
 
-    if (document.getElementById('progress-checklist-text')) document.getElementById('progress-checklist-text').textContent = `${checked}/${this.state.checklist.length} 項`;
+    if (document.getElementById('progress-checklist-text')) document.getElementById('progress-checklist-text').textContent = `${checked}/${this.state.checklist.length} 項目`;
     if (document.getElementById('progress-checklist')) document.getElementById('progress-checklist').style.width = `${Math.round((checked / this.state.checklist.length) * 100)}%`;
   },
 
   updateDashboard() {
+    // 今月（実際のカレンダー月）の支出合計 —— 家計簿の記録と連動
+    const nowMonth = this.getCurrentMonthStr();
+    const monthJpy = this.state.expenses
+      .filter(e => this.getExpenseMonth(e) === nowMonth)
+      .reduce((sum, e) => sum + e.amount, 0);
+    const monthNtd = Math.round(monthJpy * this.state.exchangeRate);
+    const expenseText = document.getElementById('progress-expense-text');
+    if (expenseText) expenseText.textContent = `${this.formatYen(monthJpy)} / NT$${monthNtd.toLocaleString('ja-JP')}`;
+
     if (this.state.startDate && this.state.endDate) {
       const msTotal = new Date(this.state.endDate) - new Date(this.state.startDate);
       const total = Math.max(1, Math.ceil(msTotal / 86400000));
@@ -938,16 +1045,16 @@ const APP = {
     
     const urgents = [];
     this.state.checklist.forEach(c => { 
-      if (!c.checked) { const d = Math.ceil((new Date(c.date) - new Date()) / 86400000); if (d <= 30 && d >= 0) urgents.push({ title: c.label, days: d, type: '重要文件' }); }
+      if (!c.checked) { const d = Math.ceil((new Date(c.date) - new Date()) / 86400000); if (d <= 30 && d >= 0) urgents.push({ title: c.label, days: d, type: '重要書類' }); }
     });
     this.state.reminders.forEach(r => { 
-      const d = Math.ceil((new Date(r.date) - new Date()) / 86400000); if (d <= 30 && d >= 0) urgents.push({ title: r.title, days: d, type: '近期提醒' }); 
+      const d = Math.ceil((new Date(r.date) - new Date()) / 86400000); if (d <= 30 && d >= 0) urgents.push({ title: r.title, days: d, type: 'リマインダー' }); 
     });
     
     urgents.sort((a, b) => a.days - b.days).slice(0, 4).forEach(u => {
-      dashList.innerHTML += `<div class="reminder-item urgent"><div class="reminder-text"><h4>${escapeHtml(u.title)}</h4><p>⚠️ ${u.type} - 剩 ${u.days} 天</p></div></div>`;
+      dashList.innerHTML += `<div class="reminder-item urgent"><div class="reminder-text"><h4>${escapeHtml(u.title)}</h4><p>⚠️ ${u.type} - あと ${u.days} 日</p></div></div>`;
     });
-    if (urgents.length === 0) dashList.innerHTML = '<p style="color:gray; font-size:0.9rem; padding:10px;">目前無 30 天內即將到期的任務，請繼續保持！</p>';
+    if (urgents.length === 0) dashList.innerHTML = '<p style="color:gray; font-size:0.9rem; padding:10px;">30日以内に期限が来るタスクはありません。この調子で頑張りましょう！</p>';
   },
 
   openModal(type) {
@@ -964,7 +1071,7 @@ const APP = {
       });
       const sortedMonths = Object.keys(grouped).sort().reverse();
       if (sortedMonths.length === 0) {
-        this.dom.modalBody.innerHTML = '<p style="text-align:center; color:gray; padding: 20px;">尚無紀錄</p>';
+        this.dom.modalBody.innerHTML = '<p style="text-align:center; color:gray; padding: 20px;">記録がありません</p>';
         return;
       }
       sortedMonths.forEach((month, index) => {
@@ -974,7 +1081,7 @@ const APP = {
         const summary = document.createElement('summary');
         const [y, m] = month.split('-');
         summary.style.cssText = 'font-size: 1.05rem; font-weight: 600; padding: 12px 16px; background: var(--primary-light); color: var(--primary); border-radius: 8px; cursor: pointer; outline: none; margin-bottom: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;';
-        summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ 點擊展開/收起</span>`;
+        summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ タップで開閉</span>`;
         details.appendChild(summary);
         const content = document.createElement('div');
         content.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 0 4px 8px 4px;';
@@ -991,28 +1098,28 @@ const APP = {
 
     // ⬇️ 處理點擊 FAB 跳出的「新增記帳」彈窗
     if (type === 'addExpense') {
-      this.dom.modalTitle.textContent = '新增記帳';
+      this.dom.modalTitle.textContent = '支出を追加';
       this.dom.modalBody.innerHTML = `
         <div class="input-group" style="margin-bottom: 24px;">
-          <label style="font-weight:600; font-size:0.9rem; color:var(--text-muted);">📅 選擇日期</label>
+          <label style="font-weight:600; font-size:0.9rem; color:var(--text-muted);">📅 日付を選択</label>
           <input type="date" id="modal-exp-date" value="${this.getTodayStr()}">
         </div>
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 1rem;">⚡ 快速記帳</h3>
-          <button class="btn-icon" onclick="APP.openModal('quickExpense')" style="font-size:0.8rem; color:var(--primary);">編輯快捷鍵 ⚙️</button>
+          <h3 style="margin: 0; font-size: 1rem;">⚡ クイック入力</h3>
+          <button class="btn-icon" onclick="APP.openModal('quickExpense')" style="font-size:0.8rem; color:var(--primary);">ショートカットを編集 ⚙️</button>
         </div>
         <div class="expense-buttons" id="modal-quick-box" style="margin-bottom: 32px;"></div>
         
-        <h3 style="margin: 0 0 12px; font-size: 1rem;">✍️ 自訂輸入</h3>
+        <h3 style="margin: 0 0 12px; font-size: 1rem;">✍️ 手動入力</h3>
         <div class="input-group">
-          <input type="text" id="modal-exp-desc" placeholder="買了什麼？ (例如: 午餐)">
-          <label for="modal-exp-category" class="field-hint">支出分類</label>
+          <input type="text" id="modal-exp-desc" placeholder="何を買いましたか？（例：昼食）">
+          <label for="modal-exp-category" class="field-hint">支出カテゴリ</label>
           <select id="modal-exp-category">
-            ${EXPENSE_CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join('')}
+            ${EXPENSE_CATEGORIES.map((c) => `<option value="${c}">${categoryLabel(c)}</option>`).join('')}
           </select>
-          <input type="number" id="modal-exp-amount" placeholder="輸入日幣金額" min="0" step="10">
-          <button class="btn" id="modal-exp-add">確認記帳</button>
+          <input type="number" id="modal-exp-amount" placeholder="金額（円）を入力" min="0" step="10">
+          <button class="btn" id="modal-exp-add">記録する</button>
         </div>
       `;
 
@@ -1021,18 +1128,28 @@ const APP = {
       this.state.quickExpenses.forEach(q => {
         const btn = document.createElement('button'); 
         btn.className = 'btn-expense';
-        btn.textContent = `${q.label} ￥${q.amount}`;
+        // 固定金額：按鈕上直接顯示金額；每次輸入：顯示「輸入金額」提示使用者按下去還要打字
+        btn.textContent = q.mode === 'variable' ? `${q.label}（金額を入力）` : `${q.label} ￥${q.amount}`;
         btn.onclick = () => {
           const d = document.getElementById('modal-exp-date').value || this.getTodayStr();
-          this.addExpenseRecord(q.label, q.amount, d, q.category);
-          this.dom.modal.classList.remove('active'); // 自動關閉視窗
+          if (q.mode === 'variable') {
+            // 只帶入名稱跟分類，金額留給使用者自己打，視窗不關閉
+            document.getElementById('modal-exp-desc').value = q.label;
+            document.getElementById('modal-exp-category').value = q.category || EXPENSE_CATEGORIES[0];
+            const amountInput = document.getElementById('modal-exp-amount');
+            amountInput.value = '';
+            amountInput.focus();
+          } else {
+            this.addExpenseRecord(q.label, q.amount, d, q.category);
+            this.dom.modal.classList.remove('active'); // 自動關閉視窗
+          }
         };
         quickBox.appendChild(btn);
       });
 
       // 綁定自訂輸入按鈕
       document.getElementById('modal-exp-add').onclick = () => {
-        const desc = document.getElementById('modal-exp-desc').value.trim() || '自訂支出';
+        const desc = document.getElementById('modal-exp-desc').value.trim() || '支出（手入力）';
         const amt = Number(document.getElementById('modal-exp-amount').value);
         const d = document.getElementById('modal-exp-date').value || this.getTodayStr();
         const category = document.getElementById('modal-exp-category').value;
@@ -1043,19 +1160,19 @@ const APP = {
       };
 
     } else if (type === 'exportExpenseMonth') {
-      this.dom.modalTitle.textContent = '📋 匯出支出明細';
+      this.dom.modalTitle.textContent = '📋 明細をExcelに出力';
 
       // 找出所有有記帳資料的月份，預設選目前正在看的那個月
-      const monthsWithData = [...new Set(this.state.expenses.map(e => e.isoMonth))].sort();
+      const monthsWithData = [...new Set(this.state.expenses.map(e => this.getExpenseMonth(e)).filter(Boolean))].sort();
       const defaultMonth = this.state.currentExpenseMonth && monthsWithData.includes(this.state.currentExpenseMonth)
         ? this.state.currentExpenseMonth
         : (monthsWithData[monthsWithData.length - 1] || this.getTodayStr().slice(0, 7));
 
       this.dom.modalBody.innerHTML = `
         <div class="input-group" style="margin-bottom: 20px;">
-          <label for="export-month-select" class="field-hint">選擇月份</label>
+          <label for="export-month-select" class="field-hint">月を選択</label>
           <select id="export-month-select">
-            ${monthsWithData.length === 0 ? `<option value="${defaultMonth}">本月尚無資料</option>` : ''}
+            ${monthsWithData.length === 0 ? `<option value="${defaultMonth}">データがありません</option>` : ''}
             ${monthsWithData.map(m => {
               const [y, mo] = m.split('-');
               return `<option value="${m}" ${m === defaultMonth ? 'selected' : ''}>${y}年${parseInt(mo)}月</option>`;
@@ -1063,18 +1180,18 @@ const APP = {
           </select>
         </div>
         <div style="display:flex; gap:10px; margin-bottom: 20px; flex-wrap:wrap;">
-          <button class="btn" id="btn-copy-expense-month" style="flex:1;">📋 複製到剪貼簿</button>
-          <button class="btn secondary" id="btn-download-expense-month" style="flex:1;">📥 下載 Excel 檔</button>
+          <button class="btn" id="btn-copy-expense-month" style="flex:1;">📋 クリップボードにコピー</button>
+          <button class="btn secondary" id="btn-download-expense-month" style="flex:1;">📥 Excelファイルをダウンロード</button>
         </div>
-        <p class="hint" style="margin-top:0; font-size:0.82rem;">複製後直接到你 Excel 帳本對應月份的空白列，按貼上即可，欄位順序是「日期、分類、項目、實際支出」。</p>
+        <p class="hint" style="margin-top:0; font-size:0.82rem;">コピー後、Excel帳簿の該当月の空白行に貼り付けるだけでOKです。列の順番は「日付・分類・項目・実際の支出」。分類は既存のExcelに合わせて中国語表記のままコピーされます。</p>
         <div style="overflow-x:auto; border:1px solid var(--border); border-radius: 12px;">
           <table id="export-preview-table" style="width:100%; border-collapse: collapse; font-size:0.85rem;">
             <thead>
               <tr style="background: var(--primary-light);">
-                <th style="padding:8px; text-align:left;">日期</th>
+                <th style="padding:8px; text-align:left;">日付</th>
                 <th style="padding:8px; text-align:left;">分類</th>
                 <th style="padding:8px; text-align:left;">項目</th>
-                <th style="padding:8px; text-align:right;">實際支出</th>
+                <th style="padding:8px; text-align:right;">実際の支出</th>
               </tr>
             </thead>
             <tbody id="export-preview-body"></tbody>
@@ -1089,7 +1206,7 @@ const APP = {
 
       const getRowsForMonth = (month) => {
         return this.state.expenses
-          .filter(e => e.isoMonth === month)
+          .filter(e => this.getExpenseMonth(e) === month)
           .sort((a, b) => a.date.localeCompare(b.date))
           .map(e => ({
             date: e.date,
@@ -1102,7 +1219,7 @@ const APP = {
       const renderPreview = () => {
         const rows = getRowsForMonth(monthSelect.value);
         if (rows.length === 0) {
-          previewBody.innerHTML = `<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--text-muted);">這個月沒有支出紀錄</td></tr>`;
+          previewBody.innerHTML = `<tr><td colspan="4" style="padding:16px; text-align:center; color:var(--text-muted);">この月の支出記録はありません</td></tr>`;
           return;
         }
         previewBody.innerHTML = rows.map(r => `
@@ -1119,21 +1236,21 @@ const APP = {
 
       copyBtn.addEventListener('click', async () => {
         const rows = getRowsForMonth(monthSelect.value);
-        if (rows.length === 0) { alert('這個月沒有支出紀錄可以複製。'); return; }
+        if (rows.length === 0) { alert('この月にはコピーできる支出記録がありません。'); return; }
         // Tab 分隔，貼到 Excel 時每個欄位會自動落在對應的儲存格
         const tsv = rows.map(r => `${r.date}\t${r.category}\t${r.desc}\t${r.amount}`).join('\n');
         try {
           await navigator.clipboard.writeText(tsv);
-          copyBtn.textContent = '✅ 已複製！';
-          setTimeout(() => { copyBtn.textContent = '📋 複製到剪貼簿'; }, 2000);
+          copyBtn.textContent = '✅ コピーしました！';
+          setTimeout(() => { copyBtn.textContent = '📋 クリップボードにコピー'; }, 2000);
         } catch (e) {
-          alert('複製失敗，你的瀏覽器可能不支援自動複製，請改用「下載 Excel 檔」。');
+          alert('コピーに失敗しました。ブラウザが自動コピーに対応していない可能性があります。「Excelファイルをダウンロード」をご利用ください。');
         }
       });
 
       downloadBtn.addEventListener('click', () => {
         const rows = getRowsForMonth(monthSelect.value);
-        if (rows.length === 0) { alert('這個月沒有支出紀錄可以下載。'); return; }
+        if (rows.length === 0) { alert('この月にはダウンロードできる支出記録がありません。'); return; }
         const tableRows = rows.map(r => `
           <tr>
             <td>${escapeHtml(r.date)}</td>
@@ -1163,7 +1280,7 @@ const APP = {
       });
 
     } else if (type === 'checkInHistory') {
-      this.dom.modalTitle.textContent = '📅 歷史簽到月曆';
+      this.dom.modalTitle.textContent = '📅 チェックイン履歴カレンダー';
       let currentViewDate = new Date(); 
       const renderCalendar = () => {
         this.dom.modalBody.innerHTML = '';
@@ -1197,7 +1314,7 @@ const APP = {
         const grid = document.createElement('div');
         grid.style.cssText = 'display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; width: 100%; box-sizing: border-box;';
         
-        const days = ['日', '一', '二', '三', '四', '五', '六'];
+        const days = ['日', '月', '火', '水', '木', '金', '土'];
         days.forEach(d => { 
             const el = document.createElement('div'); 
             el.style.cssText = 'font-weight: 600; font-size: 0.8rem; color: var(--text-muted); padding-bottom: 8px;'; 
@@ -1224,57 +1341,42 @@ const APP = {
       };
       renderCalendar();
 
-    } else if (type === 'punch') {
-      this.dom.modalTitle.textContent = '打卡歷史紀錄 (依月份分類)';
-      const punchArray = Object.keys(this.state.punchRecords).map(date => ({ date, data: this.state.punchRecords[date] }));
-      renderGrouped(punchArray, item => item.date.substring(0, 7), (item) => {
-        const { date, data: day } = item;
-        const div = document.createElement('div'); div.className = 'history-card';
-        let html = `<p><strong>${date}</strong></p>`;
-        if (day.manualTotal > 0) html += `<p>手動時數: ${day.manualTotal} 小時 <button class="btn-sm secondary" onclick="APP.editManualPunch('${date}')">修改</button></p>`;
-        else day.records.forEach((r, i) => html += `<p>進: ${r.in} | 出: ${r.out || '--'} <button class="btn-sm secondary" onclick="APP.editPunch('${date}', ${i})">修改</button></p>`);
-        html += `<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deletePunchDay('${date}')">刪除整日</button></div>`;
-        div.innerHTML = html; return div;
-      });
-
     } else if (type === 'quickExpense') {
-      this.dom.modalTitle.textContent = '編輯快速記帳按鈕';
-      const categoryListText = EXPENSE_CATEGORIES.map((c, i) => `${i + 1}: ${c}`).join('\n');
+      this.dom.modalTitle.textContent = 'クイック入力ボタンの編集';
+      const categoryListText = EXPENSE_CATEGORIES.map((c, i) => `${i + 1}: ${categoryLabel(c)}`).join('\n');
       this.state.quickExpenses.forEach((q, idx) => {
         const div = document.createElement('div'); div.className = 'history-card';
-        div.innerHTML = `<p>${q.label} (￥${q.amount})<br><span class="hint" style="font-size:0.8rem;">分類：${q.category || '未分類'}</span></p><div class="history-actions"><button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編輯</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">刪除</button></div>`;
+        const amountLabel = q.mode === 'variable' ? '金額：毎回入力' : `固定金額：￥${q.amount}`;
+        div.innerHTML = `<p>${escapeHtml(q.label)}<br><span class="hint" style="font-size:0.8rem;">${amountLabel}｜カテゴリ：${escapeHtml(categoryLabel(q.category))}</span></p><div class="history-actions"><button class="btn btn-sm secondary" onclick="APP.editQuickExpense(${idx})">編集</button> <button class="btn btn-sm danger" onclick="APP.deleteItem('quickExpenses', ${idx}, 'quickExpense')">削除</button></div>`;
         this.dom.modalBody.appendChild(div);
       });
-      const addBtn = document.createElement('button'); addBtn.className = 'btn secondary'; addBtn.textContent = '+ 新增快捷鍵';
+      const addBtn = document.createElement('button'); addBtn.className = 'btn secondary'; addBtn.textContent = '+ ショートカットを追加';
       addBtn.onclick = () => {
-        const label = prompt('按鈕名稱 (例: 咖啡)'); if (!label) return;
-        const amount = Number(prompt('金額'));
-        if (!amount) return;
-        const catNum = Number(prompt(`支出分類（輸入編號 1-12）：\n${categoryListText}`));
+        const label = prompt('ボタン名（例：コーヒー）'); if (!label) return;
+        const isVariable = confirm('この項目は毎回金額が変わりますか？\n\n「OK」＝ 押したあとに毎回金額を入力（例：コーヒー、昼食）\n「キャンセル」＝ 金額固定で、押すだけで記録（例：家賃￥5000）');
+        let amount = 0;
+        if (!isVariable) {
+          amount = Number(prompt('固定金額'));
+          if (!amount) return;
+        }
+        const catNum = Number(prompt(`支出カテゴリ（番号 1-13 を入力）：\n${categoryListText}`));
         const category = EXPENSE_CATEGORIES[catNum - 1] || '未分類';
-        this.state.quickExpenses.push({ id: Date.now(), label, amount, category });
+        this.state.quickExpenses.push({ id: Date.now(), label, amount, category, mode: isVariable ? 'variable' : 'fixed' });
         this.saveState(); this.renderExpenses(); this.openModal('quickExpense');
       };
       this.dom.modalBody.appendChild(addBtn);
 
-    } else if (type === 'note' || type === 'journal') {
-      this.dom.modalTitle.textContent = type === 'note' ? '歷史備註 (依月份分類)' : '歷史週誌 (依月份分類)';
-      const targetArr = this.state[type + 's'].map((item, idx) => ({ ...item, _idx: idx }));
+    } else if (type === 'note') {
+      this.dom.modalTitle.textContent = '過去のメモ（月別）';
+      const targetArr = this.state.notes.map((item, idx) => ({ ...item, _idx: idx }));
       renderGrouped(targetArr, item => getMonthFromId(item.id), (item) => {
         const div = document.createElement('div'); div.className = 'history-card';
-        const title = type === 'journal' ? `第 ${item.week} 週` : '';
-        
-        // 🌟 正確的週誌顯示邏輯應該放在這裡！
-        const textDisplay = type === 'journal' 
-          ? (item.text ? `<p style="white-space:pre-wrap;">${escapeHtml(item.text)}</p>` : `<div style="background: rgba(0,0,0,0.02); padding: 8px; border-radius: 6px; margin-bottom: 8px;"><strong style="font-size: 0.85rem; color: var(--primary);">📝 實習內容與進度：</strong><br><span style="white-space:pre-wrap;">${escapeHtml(item.content || '無')}</span></div><div style="background: rgba(0,0,0,0.02); padding: 8px; border-radius: 6px;"><strong style="font-size: 0.85rem; color: var(--primary);">💡 工作心得感想與建議：</strong><br><span style="white-space:pre-wrap;">${escapeHtml(item.reflection || '無')}</span></div>`)
-          : `<p style="white-space:pre-wrap;">${escapeHtml(item.text || '')}</p>`;
-
-        div.innerHTML = `<p><strong>${title}</strong> <span style="font-size:0.8rem; color:gray;">${item.date}</span></p>${textDisplay}<div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('${type}s', ${item._idx}, '${type}')">刪除</button></div>`;
+        div.innerHTML = `<p><span style="font-size:0.8rem; color:gray;">${escapeHtml(item.date || '')}</span></p><p style="white-space:pre-wrap;">${escapeHtml(item.text || '')}</p><div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('notes', ${item._idx}, 'note')">削除</button></div>`;
         return div;
       });
 
     } else if (type === 'manageChecklist') {
-      this.dom.modalTitle.textContent = '📋 管理學校規定文件清單';
+      this.dom.modalTitle.textContent = '📋 学校指定書類リストの管理';
       this.dom.modalBody.innerHTML = '';
 
       // 渲染現有的清單項目
@@ -1288,7 +1390,7 @@ const APP = {
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
               <p style="margin: 0; font-weight: 600; color: var(--text);">${escapeHtml(c.label)}</p>
-              <p style="margin: 4px 0 0 0; color:var(--text-muted); font-size: 0.85rem;">期限: ${c.date || '無'}</p>
+              <p style="margin: 4px 0 0 0; color:var(--text-muted); font-size: 0.85rem;">期限：${c.date || 'なし'}</p>
             </div>
             <div class="history-actions" style="margin-top:0;">
               <button class="btn-icon" style="color:var(--primary); font-size:1.1rem; cursor:pointer;" onclick="APP.editChecklistItem(${idx})">✏️</button>
@@ -1302,12 +1404,12 @@ const APP = {
       // 新增按鈕
       const addBtn = document.createElement('button');
       addBtn.className = 'btn secondary';
-      addBtn.textContent = '+ 新增規定文件';
+      addBtn.textContent = '+ 書類を追加';
       addBtn.style.marginTop = '8px';
       addBtn.onclick = () => {
-        const label = prompt('文件名稱 (例如: 實習合約):');
+        const label = prompt('書類名（例：実習契約書）：');
         if (!label) return;
-        const date = prompt('截止日期 (YYYY-MM-DD):', this.getTodayStr());
+        const date = prompt('締切日 (YYYY-MM-DD)：', this.getTodayStr());
         if (date) {
           this.state.checklist.push({ id: 'c' + Date.now(), label, date, checked: false });
           this.saveState();
@@ -1319,18 +1421,18 @@ const APP = {
       this.dom.modalBody.appendChild(addBtn);
 
     } else if (type === 'gallery') {
-      this.dom.modalTitle.textContent = '📸 實習相簿';
+      this.dom.modalTitle.textContent = '📸 実習アルバム';
       this.dom.modalBody.innerHTML = `
         <div style="margin-bottom: 20px; display:flex; gap: 10px; flex-wrap: wrap;">
             <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
-            <button class="btn" onclick="document.getElementById('image-upload').click()">上傳新圖片</button>
-            <button class="btn secondary" id="export-gallery">📥 匯出成 Word（依週次）</button>
+            <button class="btn" onclick="document.getElementById('image-upload').click()">写真を追加</button>
+            <button class="btn secondary" id="export-gallery">📥 Wordに出力（週ごと）</button>
         </div>
         <div id="upload-progress-container" style="display:none; margin-bottom: 20px;">
             <div class="progress-bar" style="background: rgba(0,0,0,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
                 <span id="upload-progress-bar" style="display: block; height: 100%; width: 0%; background: var(--primary); transition: width 0.3s;"></span>
             </div>
-            <p id="upload-status" style="font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top: 8px;">準備上傳...</p>
+            <p id="upload-status" style="font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top: 8px;">準備中...</p>
         </div>
         <div id="modal-gallery-groups"></div>
       `;
@@ -1338,12 +1440,12 @@ const APP = {
       const groupsContainer = document.getElementById('modal-gallery-groups');
       const images = this.state.galleryImages || [];
       if (images.length === 0) {
-        groupsContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 20px 0;">還沒有照片，點上面「上傳新圖片」加入第一張吧！</p>';
+        groupsContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 20px 0;">まだ写真がありません。「写真を追加」から最初の1枚を追加しましょう！</p>';
       } else {
         // 依實習週次分組；沒有 week 欄位的舊照片，用當初上傳日期回推所屬週次
         const byWeek = {};
         images.forEach((img, idx) => {
-          const week = img.week || this.getWeekNumForDate(img.date);
+          const week = parseInt(img.week) || this.getWeekNumForDate(img.date);
           if (!byWeek[week]) byWeek[week] = [];
           byWeek[week].push({ ...img, idx });
         });
@@ -1352,7 +1454,7 @@ const APP = {
         groupsContainer.innerHTML = weekKeys.map((week) => {
           const cards = byWeek[week].map((img) => `
             <div class="gallery-item" style="margin-bottom: 15px; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--border); break-inside: avoid;">
-              <img src="${img.url}" style="width: 100%; display: block;" alt="實習照片">
+              <img src="${img.url}" style="width: 100%; display: block;" alt="実習の写真">
               <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 6px; font-size: 0.75rem;">
                 ${img.date}
                 <button class="btn-icon" onclick="APP.deleteItem('galleryImages', ${img.idx}, 'gallery')" style="float:right; background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer;">🗑️</button>
@@ -1360,7 +1462,7 @@ const APP = {
             </div>`).join('');
           return `
             <div class="gallery-week-group" style="margin-bottom: 24px;">
-              <h3 style="font-size: 0.95rem; color: var(--text-muted); margin: 0 0 12px;">第 ${week} 週</h3>
+              <h3 style="font-size: 0.95rem; color: var(--text-muted); margin: 0 0 12px;">第${week}週</h3>
               <div class="masonry-grid" style="column-count: 2; column-gap: 15px;">${cards}</div>
             </div>`;
         }).join('');
@@ -1374,12 +1476,12 @@ const APP = {
         if (files.length === 0) return;
 
         if (!this.firebaseUser) {
-          alert('🚨 錯誤：請先在設定頁登入 Google 帳號！');
+          alert('🚨 エラー：先に設定ページでGoogleアカウントにログインしてください！');
           return;
         }
 
         if (CLOUDINARY_CLOUD_NAME.includes('請填入')) {
-          alert('🚨 尚未設定 Cloudinary，請先在 app.js 頂部填入 CLOUDINARY_CLOUD_NAME 和 CLOUDINARY_UPLOAD_PRESET');
+          alert('🚨 Cloudinaryが未設定です。app.js の先頭にある CLOUDINARY_CLOUD_NAME と CLOUDINARY_UPLOAD_PRESET を入力してください。');
           return;
         }
 
@@ -1404,13 +1506,13 @@ const APP = {
             if (!evt.lengthComputable) return;
             const progress = (evt.loaded / evt.total) * 100;
             progressBar.style.width = `${progress}%`;
-            statusText.textContent = `正在上傳第 ${index + 1} 張 (${Math.round(progress)}%)`;
+            statusText.textContent = `${index + 1}枚目をアップロード中 (${Math.round(progress)}%)`;
           });
 
           xhr.onload = () => {
             if (xhr.status < 200 || xhr.status >= 300) {
               console.error('[上傳失敗詳細資訊]:', xhr.responseText);
-              alert(`上傳失敗！\nHTTP ${xhr.status}\n請確認 Cloudinary 的 Cloud name / Upload preset 是否正確，且 preset 設定為 Unsigned。`);
+              alert(`アップロードに失敗しました。\nHTTP ${xhr.status}\nCloudinaryの Cloud name / Upload preset が正しいか、presetが Unsigned になっているか確認してください。`);
               progressContainer.style.display = 'none';
               return;
             }
@@ -1422,18 +1524,18 @@ const APP = {
 
               completedCount++;
               if (completedCount === files.length) {
-                statusText.textContent = '全部上傳完成！';
+                statusText.textContent = 'すべてのアップロードが完了しました！';
                 setTimeout(() => { this.openModal('gallery'); }, 1000);
               }
             } catch (parseErr) {
               console.error('[解析回應失敗]:', parseErr);
-              alert('圖片上傳了，但無法取得顯示網址。');
+              alert('写真はアップロードされましたが、表示用のURLを取得できませんでした。');
             }
           };
 
           xhr.onerror = () => {
             console.error('[網路錯誤]: Cloudinary 上傳失敗');
-            alert('上傳失敗：網路錯誤，請檢查網路連線後再試一次。');
+            alert('アップロードに失敗しました：ネットワークエラーです。接続を確認してもう一度お試しください。');
             progressContainer.style.display = 'none';
           };
 
@@ -1444,156 +1546,48 @@ const APP = {
   },
 
   deleteItem(arrayName, index, modalToReopen) { 
-    if (confirm('確定刪除？')) { this.state[arrayName].splice(index, 1); this.saveState(); this.renderAll(); if (modalToReopen) this.openModal(modalToReopen); } 
+    if (confirm('削除してもよろしいですか？')) { this.state[arrayName].splice(index, 1); this.saveState(); this.renderAll(); if (modalToReopen) this.openModal(modalToReopen); } 
   },
   
   editTextItem(arrayName, index, modalToReopen) { 
-    const newText = prompt('請修改內容:', this.state[arrayName][index].text); 
+    const newText = prompt('内容を編集してください：', this.state[arrayName][index].text); 
     if (newText) { this.state[arrayName][index].text = newText; this.saveState(); this.renderAll(); this.openModal(modalToReopen); } 
   },
 
   editReminder(index) { 
     const r = this.state.reminders[index]; 
-    const newTitle = prompt('修改提醒標題:', r.title); if (newTitle) r.title = newTitle; 
-    const newDate = prompt('修改日期 (YYYY-MM-DD):', r.date); if (newDate) r.date = newDate; 
+    const newTitle = prompt('リマインダー名を編集：', r.title); if (newTitle) r.title = newTitle; 
+    const newDate = prompt('日付を編集 (YYYY-MM-DD)：', r.date); if (newDate) r.date = newDate; 
     this.saveState(); this.renderReminders(); this.updateDashboard(); 
   },
 
   editQuickExpense(index) { 
     const q = this.state.quickExpenses[index]; 
-    const newLabel = prompt('名稱:', q.label); if (newLabel) q.label = newLabel; 
-    const newAmt = Number(prompt('金額:', q.amount)); if (newAmt) q.amount = newAmt; 
-    const categoryListText = EXPENSE_CATEGORIES.map((c, i) => `${i + 1}: ${c}`).join('\n');
+    const newLabel = prompt('名前：', q.label); if (newLabel) q.label = newLabel; 
+    const isVariable = confirm('この項目は毎回金額が変わりますか？\n\n「OK」＝ 押したあとに毎回金額を入力\n「キャンセル」＝ 金額固定で、押すだけで記録');
+    q.mode = isVariable ? 'variable' : 'fixed';
+    if (!isVariable) {
+      const newAmt = Number(prompt('固定金額：', q.amount || '')); if (newAmt) q.amount = newAmt;
+    }
+    const categoryListText = EXPENSE_CATEGORIES.map((c, i) => `${i + 1}: ${categoryLabel(c)}`).join('\n');
     const currentCatIdx = EXPENSE_CATEGORIES.indexOf(q.category) + 1;
-    const catNum = prompt(`支出分類（輸入編號 1-12，留白則不變更）：\n${categoryListText}`, currentCatIdx > 0 ? currentCatIdx : '');
+    const catNum = prompt(`支出カテゴリ（番号 1-13 を入力、空欄なら変更なし）：\n${categoryListText}`, currentCatIdx > 0 ? currentCatIdx : '');
     if (catNum) { const c = EXPENSE_CATEGORIES[Number(catNum) - 1]; if (c) q.category = c; }
     this.saveState(); this.renderExpenses(); this.openModal('quickExpense'); 
   },
 
   editChecklistItem(index) {
     const c = this.state.checklist[index];
-    const newLabel = prompt('修改文件名稱:', c.label);
+    const newLabel = prompt('書類名を編集：', c.label);
     if (newLabel) c.label = newLabel;
     
-    const newDate = prompt('修改截止日期 (YYYY-MM-DD):', c.date);
+    const newDate = prompt('締切日を編集 (YYYY-MM-DD)：', c.date);
     if (newDate) c.date = newDate;
 
     this.saveState();
     this.renderChecklist();
     this.updateDashboard();
     this.openModal('manageChecklist'); // 修改完自動重新整理彈窗
-  },
-
-  editPunch(date, idx) { 
-    const rec = this.state.punchRecords[date].records[idx]; 
-    const i = prompt('進 (HH:MM)', rec.in); if (i) rec.in = i; 
-    const o = prompt('出 (HH:MM)', rec.out || ''); if (o !== null) rec.out = o; 
-    this.saveState(); this.renderHoursPage(); this.openModal('punch'); 
-  },
-
-  editManualPunch(date) { 
-    const h = Number(prompt('修改手動總時數', this.state.punchRecords[date].manualTotal)); 
-    if (h > 0) { this.state.punchRecords[date].manualTotal = h; this.saveState(); this.renderHoursPage(); this.openModal('punch'); } 
-  },
-
-  deletePunchDay(date) { 
-    if (confirm('確定要刪除這天的所有打卡紀錄嗎？')) { delete this.state.punchRecords[date]; this.saveState(); this.renderHoursPage(); this.openModal('punch'); } 
-  },
-
-  exportJournal(index) { 
-    const j = this.state.journals[index]; const win = window.open('', '_blank'); win.document.write(`<html><head><title>第 ${j.week} 週週誌</title></head><body style="font-family: sans-serif; padding: 40px; line-height: 1.8;"><h2>第 ${j.week} 週實習週誌</h2><hr><p style="white-space: pre-wrap;">${escapeHtml(j.text)}</p></body></html>`); win.document.close(); 
-  },
-
-  exportAllToWord() {
-    // 1. 建立 16 週的空白陣列底板
-    const weeksData = Array(16).fill(null).map(() => ({ content: '', reflection: '' }));
-
-    // 2. 將資料準確填入對應週次 (修復同一週被拆開的 Bug)
-    this.state.journals.forEach(j => {
-      let w = parseInt(j.week);
-      
-      // 如果沒有設定實習開始日期導致週次無法判斷，一律先集中放在第 1 週
-      if (isNaN(w) || w < 1 || w > 16) {
-        w = 1; 
-      }
-      
-      const c = j.content || j.text || ''; 
-      const r = j.reflection || '';
-      
-      if (c || r) {
-        // 同一週有多筆紀錄時，用換行隔開，不會再跑到下一週了
-        if (c) weeksData[w - 1].content += (weeksData[w - 1].content ? '\n\n' : '') + c;
-        if (r) weeksData[w - 1].reflection += (weeksData[w - 1].reflection ? '\n\n' : '') + r;
-      }
-    });
-
-    // 3. 組合出兩種不同格式的內容
-    let contentRows = '';
-    let reflectionContent = '';
-
-    for(let i = 0; i < 16; i++) {
-      const weekLabel = `第${i + 1}週`; // 確保中間沒有空格
-      
-      // 【表格一：實習內容與進度】維持 16 個獨立格子
-      const contentDisplay = weeksData[i].content ? escapeHtml(weeksData[i].content).replace(/\n/g, '<br>') : '';
-      contentRows += `<tr><td style="border: 1px solid black; padding: 10px; vertical-align: top;">${weekLabel}<br>${contentDisplay}</td></tr>`;
-
-      // 【表格二：工作心得感想與建議】合併成一個大格子，用三個換行符號隔開
-      const reflectionDisplay = weeksData[i].reflection ? escapeHtml(weeksData[i].reflection).replace(/\n/g, '<br>') : '';
-      reflectionContent += `${weekLabel}<br>${reflectionDisplay}`;
-      
-      // 除了最後一週之外，每一週後面都加上三個段落符號 (空三行)
-      if (i < 15) {
-        reflectionContent += `<br><br><br>`;
-      }
-    }
-
-    // 4. 套用純淨版 Word 專用語法 (設定邊距 2cm、取消所有粗體)
-    const html = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head>
-        <meta charset='utf-8'>
-        <title>實習生工作週誌_純淨版</title>
-        <style>
-          /* 設定上下左右 2 公分邊距 */
-          @page { margin: 2.0cm; }
-          /* 全局取消粗體 */
-          body { font-family: "標楷體", "DFKai-SB", serif; font-weight: normal; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid black; padding: 8px; text-align: left; line-height: 1.5; font-weight: normal; }
-          /* 表頭置中且取消粗體 */
-          th { background-color: #e0e0e0; text-align: center; font-weight: normal; }
-        </style>
-      </head>
-      <body>
-        <!-- 實習內容與進度表 -->
-        <table>
-          <tr><th>實習內容與進度（表列可自行新增）</th></tr>
-          ${contentRows}
-        </table>
-
-        <br>
-
-        <!-- 工作心得感想與建議表 (合併單一欄位版) -->
-        <table>
-          <tr><th>工作心得感想與建議</th></tr>
-          <tr><td style="vertical-align: top; padding: 10px;">
-            ${reflectionContent}
-          </td></tr>
-        </table>
-      </body>
-      </html>
-    `;
-
-    // 5. 觸發下載
-    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '實習生工作週誌_純淨版.doc';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   },
 
   // 把每張圖片抓下來轉成 base64，這樣存成的 .doc 檔案本身就包含完整照片，
@@ -1612,19 +1606,19 @@ const APP = {
   async exportGalleryToWord() {
     const images = this.state.galleryImages || [];
     if (images.length === 0) {
-      alert('目前還沒有照片可以匯出。');
+      alert('出力できる写真がまだありません。');
       return;
     }
 
     const exportBtn = document.getElementById('export-gallery');
     const originalLabel = exportBtn ? exportBtn.textContent : '';
-    if (exportBtn) { exportBtn.disabled = true; exportBtn.textContent = '轉換中，請稍候...'; }
+    if (exportBtn) { exportBtn.disabled = true; exportBtn.textContent = '変換中です。しばらくお待ちください...'; }
 
     try {
       // 1. 依週次分組
       const byWeek = {};
       images.forEach((img) => {
-        const week = img.week || this.getWeekNumForDate(img.date);
+        const week = parseInt(img.week) || this.getWeekNumForDate(img.date);
         if (!byWeek[week]) byWeek[week] = [];
         byWeek[week].push(img);
       });
@@ -1687,52 +1681,12 @@ const APP = {
       document.body.removeChild(link);
     } catch (e) {
       console.error('匯出相簿失敗：', e);
-      alert('匯出失敗，請確認網路連線後再試一次。');
+      alert('出力に失敗しました。ネットワーク接続を確認してもう一度お試しください。');
     } finally {
       if (exportBtn) { exportBtn.disabled = false; exportBtn.textContent = originalLabel; }
     }
   },
 
-  exportToCSV() {
-    let csvContent = "\uFEFF";
-    csvContent += "=== 打卡紀錄 ===\n日期,上班時間,下班時間,手動登記時數\n"; 
-    const punchDates = Object.keys(this.state.punchRecords).sort();
-    if (punchDates.length === 0) {
-      csvContent += "尚無打卡紀錄\n";
-    } else {
-      punchDates.forEach(date => {
-        const day = this.state.punchRecords[date];
-        if (day.manualTotal > 0) {
-          csvContent += `${date},--,--,${day.manualTotal}\n`;
-        } else {
-          day.records.forEach(r => {
-            csvContent += `${date},${r.in},${r.out || '未打卡'},0\n`;
-          });
-        }
-      });
-    }
-
-    csvContent += "\n\n=== 記帳紀錄 ===\n紀錄時間,消費項目,金額(日圓)\n"; 
-    if (this.state.expenses.length === 0) {
-      csvContent += "尚無記帳紀錄\n";
-    } else {
-      const sortedExpenses = [...this.state.expenses].sort((a, b) => a.date.localeCompare(b.date));
-      sortedExpenses.forEach(exp => {
-        const safeDesc = `"${exp.desc.replace(/"/g, '""')}"`;
-        csvContent += `${exp.date},${safeDesc},${exp.amount}\n`;
-      });
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `實習報表_${this.getTodayStr()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  },
-  
   async saveState() { 
     this.saveStateLocally();
     if (this.firebaseUser) { try { await setDoc(doc(db, "users", this.firebaseUser.uid), this.state); } catch (e) { console.error('同步雲端失敗', e); } }

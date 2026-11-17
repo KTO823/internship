@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="ja">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>實習時期｜卡戳</title>
-  <meta name="description" content="專業實習生活管理 APP：工時追蹤、記帳系統、週誌工作台、畢業檢查清單。" />
+  <meta name="description" content="インターン生活管理アプリ：勤務時間・家計簿・メモとアルバム・卒業チェックリスト。" />
   <meta name="theme-color" content="#1f3c88" />
 
   <!-- PWA：可安裝到手機主畫面 -->
@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="實習時期" />
 
-  <link rel="stylesheet" href="./assets/app.css?v=2" />
+  <link rel="stylesheet" href="./assets/app.css?v=3" />
 </head>
 <body>
   <div class="app-container">
@@ -29,23 +29,23 @@
       <nav class="sidebar-nav">
         <button class="nav-item active" data-page="dashboard">
           <span class="icon">📊</span>
-          <span class="label">首頁</span>
+          <span class="label">ホーム</span>
         </button>
         <button class="nav-item" data-page="hours">
           <span class="icon">⏱</span>
-          <span class="label">工時</span>
+          <span class="label">勤務時間</span>
         </button>
         <button class="nav-item" data-page="expenses">
           <span class="icon">💰</span>
-          <span class="label">記帳</span>
+          <span class="label">家計簿</span>
         </button>
         <button class="nav-item" data-page="notes">
           <span class="icon">📝</span>
-          <span class="label">週誌</span>
+          <span class="label">メモ</span>
         </button>
         <button class="nav-item" data-page="checklist">
           <span class="icon">✓</span>
-          <span class="label">檢查表</span>
+          <span class="label">チェックリスト</span>
         </button>
         <button class="nav-item" data-page="settings">
           <span class="dynamic-icon icon-settings"></span>
@@ -53,31 +53,31 @@
         </button>
       </nav>
       <div class="sidebar-footer">
-        <button class="btn-logout" id="sidebar-logout">登出</button>
-        <p class="user-info" id="sidebar-user">未登入</p>
+        <button class="btn-logout" id="sidebar-logout">ログアウト</button>
+        <p class="user-info" id="sidebar-user">未ログイン</p>
       </div>
     </aside>
 
     <nav class="mobile-tabs">
       <button class="tab-item active" data-page="dashboard">
         <span class="icon">📊</span>
-        <span class="label">首頁</span>
+        <span class="label">ホーム</span>
       </button>
       <button class="tab-item" data-page="hours">
         <span class="icon">⏱</span>
-        <span class="label">工時</span>
+        <span class="label">勤務</span>
       </button>
       <button class="tab-item" data-page="expenses">
         <span class="icon">💰</span>
-        <span class="label">記帳</span>
+        <span class="label">家計簿</span>
       </button>
       <button class="tab-item" data-page="notes">
         <span class="icon">📝</span>
-        <span class="label">週誌</span>
+        <span class="label">メモ</span>
       </button>
       <button class="tab-item" data-page="checklist">
         <span class="icon">✓</span>
-        <span class="label">檢查</span>
+        <span class="label">チェック</span>
       </button>
     </nav>
 
@@ -86,8 +86,8 @@
       <div class="page active" id="page-dashboard" data-page="dashboard">
         <div class="page-header">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <h1 style="margin: 0;">首頁</h1>
-            <button class="btn-icon" id="btn-show-guide" style="background: var(--primary-light); color: var(--primary); padding: 4px 8px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; border: none;">📖</button>
+            <h1 style="margin: 0;">ホーム</h1>
+            <button class="btn-icon" id="btn-show-guide" aria-label="使い方" style="background: var(--primary-light); color: var(--primary); padding: 4px 8px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; border: none;">📖</button>
           </div>
           <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
@@ -96,7 +96,7 @@
           
           <div class="card" style="margin-bottom: 20px;">
             <div class="progress-label-row">
-              <label>當月支出總計</label>
+              <label>今月の支出合計</label>
               <strong id="progress-expense-text" class="text-primary" style="font-size: 1.6rem;">￥0 / NT$0</strong>
             </div>
           </div>
@@ -105,7 +105,7 @@
             <div class="progress-compact">
               <div class="progress-item">
                 <div class="progress-label-row">
-                  <label>實習進度</label>
+                  <label>実習の進捗</label>
                   <strong id="progress-text" class="text-primary">0%</strong>
                 </div>
                 <div class="progress-bar">
@@ -114,8 +114,8 @@
               </div>
               <div class="progress-item">
                 <div class="progress-label-row">
-                  <label>工時達成</label>
-                  <strong id="progress-hours-text" class="text-primary">0/160 小時</strong>
+                  <label id="progress-hours-label">今月の勤務時間</label>
+                  <strong id="progress-hours-text" class="text-primary">0/160 時間</strong>
                 </div>
                 <div class="progress-bar">
                   <span id="progress-hours" style="width:0%"></span>
@@ -123,8 +123,8 @@
               </div>
               <div class="progress-item">
                 <div class="progress-label-row">
-                  <label>檢查表完成</label>
-                  <strong id="progress-checklist-text" class="text-primary">0/10 項</strong>
+                  <label>チェックリスト完了</label>
+                  <strong id="progress-checklist-text" class="text-primary">0/10 項目</strong>
                 </div>
                 <div class="progress-bar">
                   <span id="progress-checklist" style="width:0%"></span>
@@ -134,61 +134,60 @@
           </div>
 
           <section class="section">
-            <h2>近期提醒</h2>
+            <h2>近日中のリマインダー</h2>
             <div id="dash-reminders" class="reminder-list card"></div>
           </section>
 
-          <!-- 新增：歷史簽到紀錄 (置底) -->
-           <section class="section" style="margin-top: 30px; margin-bottom: 40px;">
-             <h2>簽到紀錄</h2>
-             <div class="card" style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
-               <div>
-                 <p style="margin: 0; font-size: 1rem;">目前已累計：<strong id="history-checkin-count" class="text-primary" style="font-size: 1.2rem;">0</strong> 天</p>
-                 <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">最後簽到：<span id="history-last-checkin">無</span></p>
-               </div>
-               <button class="btn secondary" id="btn-view-checkin-history" style="margin: 0; padding: 8px 16px;">查看明細</button>
-             </div>
-           </section>
+          <section class="section" style="margin-top: 30px; margin-bottom: 40px;">
+            <h2>チェックイン記録</h2>
+            <div class="card" style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <p style="margin: 0; font-size: 1rem;">累計：<strong id="history-checkin-count" class="text-primary" style="font-size: 1.2rem;">0</strong> 日</p>
+                <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">最終チェックイン：<span id="history-last-checkin">なし</span></p>
+              </div>
+              <button class="btn secondary" id="btn-view-checkin-history" style="margin: 0; padding: 8px 16px;">履歴を見る</button>
+            </div>
+          </section>
         </div>
       </div>
 
 
       <div class="page" id="page-hours" data-page="hours">
         <div class="page-header">
-          <h1>工時管理</h1>
+          <h1>勤務時間</h1>
           <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         <div class="page-content">
           <div class="card">
-            <h2 id="hours-target-label">目標工時</h2>
+            <h2 id="hours-target-label">今月の勤務時間</h2>
             <div class="hours-display">
               <strong id="hours-display">0</strong>
-              <span>小時</span>
+              <span>時間</span>
             </div>
-            <p class="hint" id="hours-hint">目標 160 小時</p>
+            <p class="hint" id="hours-hint">目標 160 時間</p>
           </div>
 
           <section class="section">
-            <h2 id="punch-date-label">今日打卡紀錄</h2>
+            <h2>月次の記録</h2>
             <div class="card">
-              
-              <div id="punch-realtime-section">
-                <div class="punch-buttons" style="margin-bottom: 16px;">
-                  <button class="btn" id="punch-in">打卡進</button>
-                  <button class="btn secondary" id="punch-out">打卡出</button>
-                </div>
+              <div class="month-nav">
+                <button class="month-nav-btn" id="btn-hours-prev" aria-label="前の月">◀</button>
+                <strong id="hours-month-display">読み込み中...</strong>
+                <button class="month-nav-btn" id="btn-hours-next" aria-label="次の月">▶</button>
               </div>
-
-              <div id="punch-manual-section" style="display: none; margin-bottom: 16px;">
-                <div class="input-group">
-                  <input type="number" id="manual-hours-input" placeholder="輸入今日總工時 (例如: 8)" step="0.5">
-                  <button class="btn" id="manual-hours-submit">儲存今日工時</button>
-                </div>
+              <p class="hint" style="margin: 0 0 14px;">1か月に1回、その月の合計勤務時間を入力します。同じ月に入力し直すと上書きされます。</p>
+              <div class="input-group">
+                <label for="hours-month-input" class="field-hint">合計勤務時間（時間）</label>
+                <input type="number" id="hours-month-input" placeholder="例：152.5" min="0" max="744" step="0.5" inputmode="decimal" />
+                <button class="btn" id="hours-month-save">この月の時間を保存</button>
               </div>
+            </div>
+          </section>
 
-              <div id="today-punch-list" style="margin-bottom: 16px; border-top: 1px dashed var(--border); padding-top: 12px;"></div>
-
-              <button class="btn secondary" id="btn-manage-punch" style="width: 100%; border-style: dashed;">📋 管理所有歷史紀錄</button>
+          <section class="section">
+            <h2>記録一覧</h2>
+            <div class="card">
+              <div id="hours-month-list"></div>
             </div>
           </section>
         </div>
@@ -196,79 +195,67 @@
 
       <div class="page" id="page-expenses" data-page="expenses">
         <div class="page-header">
-          <h1>記帳系統</h1>
+          <h1>家計簿</h1>
           <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
 
         <div class="page-content">
           <div class="card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 16px;">
-            <button class="btn-icon" id="btn-prev-month" style="font-size: 1.2rem; padding: 8px 16px; background: var(--primary-light); border-radius: 8px; color: var(--primary);">◀</button>
-            <strong id="current-month-display" style="font-size: 1.2rem;">載入中...</strong>
-            <button class="btn-icon" id="btn-next-month" style="font-size: 1.2rem; padding: 8px 16px; background: var(--primary-light); border-radius: 8px; color: var(--primary);">▶</button>
+            <button class="month-nav-btn" id="btn-prev-month" aria-label="前の月">◀</button>
+            <strong id="current-month-display" style="font-size: 1.2rem;">読み込み中...</strong>
+            <button class="month-nav-btn" id="btn-next-month" aria-label="次の月">▶</button>
           </div>
           
-          <div class="card" style="margin-bottom: 24px;">
-            <h2 style="margin-top: 0; text-align: center; color: var(--text-muted); font-size: 0.95rem;">本月總支出</h2>
+          <div class="card" style="margin-bottom: 20px;">
+            <h2 style="margin-top: 0; text-align: center; color: var(--text-muted); font-size: 0.95rem;">この月の支出合計</h2>
             <div class="expense-display">
               <div class="currency">
-                <span class="label">日幣</span>
+                <span class="label">日本円</span>
                 <strong id="expense-jpy">￥0</strong>
               </div>
               <div class="divider"></div>
               <div class="currency">
-                <span class="label">台幣估算</span>
+                <span class="label">台湾ドル（概算）</span>
                 <strong id="expense-ntd">NT$0</strong>
               </div>
             </div>
-            <button class="btn secondary" id="btn-export-expense-month" style="width:100%; margin-top:16px;">📋 匯出明細到 Excel</button>
+            <button class="btn secondary" id="btn-export-expense-month" style="width:100%; margin-top:16px;">📋 明細をExcelに出力</button>
           </div>
+
+          <details class="card category-card" id="expense-category-card" open>
+            <summary>カテゴリ別の合計</summary>
+            <div id="expense-category-list"></div>
+          </details>
           
           <div id="monthly-expense-list" style="padding-bottom: 80px;"></div>
         </div>
         
-        <button id="btn-fab-add-expense" class="fab-btn">＋</button>
+        <button id="btn-fab-add-expense" class="fab-btn" aria-label="支出を追加">＋</button>
       </div> 
         
       <div class="page" id="page-notes" data-page="notes">
         <div class="page-header">
-          <h1>週誌與備註</h1>
+          <h1>メモ・アルバム</h1>
           <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         <div class="page-content">
           <section class="section">
-            <h2>快速備註</h2>
+            <h2>クイックメモ</h2>
             <div class="card">
-              <textarea id="quick-note" placeholder="臨時筆記..." rows="3"></textarea>
+              <textarea id="quick-note" placeholder="ちょっとしたメモ..." rows="3"></textarea>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                 <button class="btn" id="save-note">保存</button>
-                <button class="btn secondary" id="clear-note">清除</button>
+                <button class="btn secondary" id="clear-note">クリア</button>
               </div>
-              <button class="btn secondary" id="btn-manage-note" style="width: 100%; border-style: dashed;">📂 管理歷史備註</button>
+              <button class="btn secondary" id="btn-manage-note" style="width: 100%; border-style: dashed;">📂 過去のメモを管理</button>
             </div>
           </section>
 
           <section class="section">
-            <h2>週誌編寫</h2>
+            <h2>実習アルバム</h2>
             <div class="card">
-              <p class="week-label" id="week-label">請先在設定頁設定實習開始日期</p>
-              
-              <div style="display: flex; flex-direction: column; gap: 12px;">
-                <div>
-                  <label style="font-weight: 600; font-size: 0.9rem; color: var(--text);">📝 實習內容與進度</label>
-                  <textarea id="journal-content" placeholder="本週做了哪些事情、學習了什麼技術..." rows="4"></textarea>
-                </div>
-                <div>
-                  <label style="font-weight: 600; font-size: 0.9rem; color: var(--text);">💡 工作心得感想與建議</label>
-                  <textarea id="journal-reflection" placeholder="遇到了什麼困難？有什麼收穫或建議？..." rows="4"></textarea>
-                </div>
-              </div>
-              
-              <div style="display: grid; gap: 12px; margin-top: 16px;">
-                <button class="btn" id="save-journal">儲存本週週誌</button>
-                <button class="btn secondary" id="btn-export-word" style="background-color: #2b579a; color: white; border-color: #2b579a;">📥 匯出 1-16 週週誌 (Word 表格)</button>
-                <button class="btn secondary" id="btn-manage-journal" style="border-style: dashed;">📖 管理歷史週誌</button>
-                <button class="btn secondary" id="btn-open-gallery" style="border-style: dashed;">📸 開啟/管理實習相簿</button>
-              </div>
+              <p class="hint" style="margin-top: 0;">写真は実習週ごとに整理され、Wordの表として出力できます。</p>
+              <button class="btn secondary" id="btn-open-gallery" style="width: 100%; border-style: dashed;">📸 アルバムを開く</button>
             </div>
           </section>
         </div>
@@ -276,29 +263,29 @@
 
       <div class="page" id="page-checklist" data-page="checklist">
         <div class="page-header">
-          <h1>畢業通關清單</h1>
+          <h1>卒業チェックリスト</h1>
           <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
         </div>
         <div class="page-content">
           <section class="section">
-            <h2>學校規定文件清單</h2>
+            <h2>学校指定の提出書類</h2>
             <div class="card">
               <div id="checklist" class="checklist"></div>
-              <p class="hint">勾選後會自動保存進度</p>
+              <p class="hint">チェックすると進捗が自動で保存されます</p>
               
-              <button class="btn secondary" id="btn-manage-checklist" style="width: 100%; border-style: dashed; margin-top: 16px;">📂 管理/編輯文件清單</button>
+              <button class="btn secondary" id="btn-manage-checklist" style="width: 100%; border-style: dashed; margin-top: 16px;">📂 書類リストを管理・編集</button>
             </div>
           </section>
           
           <section class="section">
-            <h2>自訂重要提醒</h2>
+            <h2>カスタムリマインダー</h2>
             <div class="card">
               <div id="reminder-list" class="reminder-list" style="margin-bottom: 16px;"></div>
               <div class="input-group">
-                <input type="text" id="new-reminder-title" placeholder="新增提醒事項" />
-                <label for="new-reminder-date" class="field-hint">到期日期</label>
+                <input type="text" id="new-reminder-title" placeholder="リマインダーを追加" />
+                <label for="new-reminder-date" class="field-hint">期限日</label>
                 <input type="date" id="new-reminder-date" />
-                <button class="btn" id="add-reminder">新增</button>
+                <button class="btn" id="add-reminder">追加</button>
               </div>
             </div>
           </section>
@@ -313,87 +300,73 @@
         <div class="page-content">
 
           <section class="section" id="app-status-section">
-            <h2>App 狀態</h2>
+            <h2>アプリの状態</h2>
             <div class="card status-rows">
               <div class="status-row" id="notify-row">
                 <div class="status-row-text">
-                  <strong>🔔 推播通知</strong>
-                  <span class="hint" id="notify-row-desc">開啟後，提醒到期時就算 App 沒開也會收到通知</span>
+                  <strong>🔔 プッシュ通知</strong>
+                  <span class="hint" id="notify-row-desc">オンにすると、期限が近づいたときにアプリを閉じていても通知が届きます</span>
                 </div>
-                <button class="btn btn-compact" id="btn-enable-notify">開啟</button>
+                <button class="btn btn-compact" id="btn-enable-notify">オンにする</button>
               </div>
               <div class="status-row" id="install-row" style="display:none;">
                 <div class="status-row-text">
-                  <strong>📲 安裝應用程式</strong>
-                  <span class="hint" id="install-row-desc">安裝到主畫面，開啟更快、可離線查看</span>
+                  <strong>📲 アプリをインストール</strong>
+                  <span class="hint" id="install-row-desc">ホーム画面に追加すると、起動が速くオフラインでも見られます</span>
                 </div>
-                <button class="btn btn-compact" id="btn-install-app">安裝</button>
+                <button class="btn btn-compact" id="btn-install-app">インストール</button>
               </div>
             </div>
           </section>
 
           <section class="section">
-            <h2>帳號登入</h2>
+            <h2>アカウント</h2>
             <div class="card">
               <div class="setting-row">
-                <button class="btn" id="settings-login" style="background:#4285F4;">用 Google 帳號登入</button>
+                <button class="btn" id="settings-login" style="background:#4285F4;">Googleアカウントでログイン</button>
               </div>
-              <p id="settings-status" class="hint">目前狀態：檢查中...</p>
+              <p id="settings-status" class="hint">現在の状態：確認中...</p>
             </div>
           </section>
 
           <section class="section">
-            <h2>個人化模式選擇</h2>
+            <h2>勤務時間の設定</h2>
             <div class="card">
-              <div class="setting-row">
-                <label>打卡模式</label>
-                <select id="settings-punch-mode" class="styled-select">
-                  <option value="realtime">即時打卡 (上班點進、下班點出)</option>
-                  <option value="manual">手動時數 (下班後一次輸入總小時)</option>
-                </select>
-              </div>
               <div class="setting-row">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <label>工時目標類型</label>
-                  <button id="btn-hours-help" style="border:none; background:#e6eefc; color:#1f3c88; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; font-weight:bold;">?</button>
+                  <label>目標のタイプ</label>
+                  <button id="btn-hours-help" aria-label="目標のタイプについて" style="border:none; background:#e6eefc; color:#1f3c88; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; font-weight:bold;">?</button>
                 </div>
                 <select id="settings-hours-mode" class="styled-select">
-                  <option value="monthly">每月目標</option>
-                  <option value="total">總時數目標</option>
+                  <option value="monthly">月ごとの目標</option>
+                  <option value="total">累計の目標</option>
                 </select>
               </div>
               <div class="setting-row">
-                <label>目標時數設定</label>
+                <label>目標時間（時間）</label>
                 <input type="number" id="settings-hours-target" value="160" min="1" />
               </div>
             </div>
           </section>
 
           <section class="section">
-            <h2>實習日期</h2>
+            <h2>実習期間</h2>
             <div class="card">
               <div class="setting-row">
-                <label>開始日期</label>
+                <label>開始日</label>
                 <input type="date" id="settings-start" />
               </div>
               <div class="setting-row">
-                <label>預計結束</label>
+                <label>終了予定日</label>
                 <input type="date" id="settings-end" />
               </div>
             </div>
           </section>
 
           <section class="section">
-            <h2>介面主題選擇 (簽到解鎖)</h2>
+            <h2>テーマ選択（チェックインで解放）</h2>
             <div class="card">
               <select id="settings-theme-select" class="styled-select" style="margin: 0;"></select>
-            </div>
-          </section>
-
-          <section class="section">
-            <h2>實習報表</h2>
-            <div class="card" style="display: grid; gap: 12px;">
-              <button class="btn" id="export-csv" style="background-color: #107c41; color: white; border-color: #107c41;">📊 下載實習報表 (Excel)</button>
             </div>
           </section>
         </div>
@@ -405,12 +378,12 @@
     <div class="modal-content">
       <div class="modal-header">
         <h2 id="modal-title">管理</h2>
-        <button id="modal-close" class="btn-icon">✕</button>
+        <button id="modal-close" class="btn-icon" aria-label="閉じる">✕</button>
       </div>
       <div id="modal-body" class="modal-body"></div>
     </div>
   </div>
 
-  <script type="module" src="./assets/app.js"></script>
+  <script type="module" src="./assets/app.js?v=3"></script>
 </body>
 </html>
