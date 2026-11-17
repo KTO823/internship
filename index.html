@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>實習時期｜卡戳</title>
-  <meta name="description" content="インターン生活管理アプリ：勤務時間・家計簿・メモとアルバム・卒業チェックリスト。" />
+  <meta name="description" content="インターン生活管理アプリ：勤務時間・家計簿・卒業チェックリスト。" />
   <meta name="theme-color" content="#1f3c88" />
 
   <!-- PWA：可安裝到手機主畫面 -->
@@ -39,10 +39,6 @@
           <span class="icon">💰</span>
           <span class="label">家計簿</span>
         </button>
-        <button class="nav-item" data-page="notes">
-          <span class="icon">📝</span>
-          <span class="label">メモ</span>
-        </button>
         <button class="nav-item" data-page="checklist">
           <span class="icon">✓</span>
           <span class="label">チェックリスト</span>
@@ -70,10 +66,6 @@
       <button class="tab-item" data-page="expenses">
         <span class="icon">💰</span>
         <span class="label">家計簿</span>
-      </button>
-      <button class="tab-item" data-page="notes">
-        <span class="icon">📝</span>
-        <span class="label">メモ</span>
       </button>
       <button class="tab-item" data-page="checklist">
         <span class="icon">✓</span>
@@ -233,34 +225,6 @@
         <button id="btn-fab-add-expense" class="fab-btn" aria-label="支出を追加">＋</button>
       </div> 
         
-      <div class="page" id="page-notes" data-page="notes">
-        <div class="page-header">
-          <h1>メモ・アルバム</h1>
-          <button class="mobile-settings-btn nav-item" data-page="settings" aria-label="設定"><span class="dynamic-icon icon-settings"></span></button>
-        </div>
-        <div class="page-content">
-          <section class="section">
-            <h2>クイックメモ</h2>
-            <div class="card">
-              <textarea id="quick-note" placeholder="ちょっとしたメモ..." rows="3"></textarea>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                <button class="btn" id="save-note">保存</button>
-                <button class="btn secondary" id="clear-note">クリア</button>
-              </div>
-              <button class="btn secondary" id="btn-manage-note" style="width: 100%; border-style: dashed;">📂 過去のメモを管理</button>
-            </div>
-          </section>
-
-          <section class="section">
-            <h2>実習アルバム</h2>
-            <div class="card">
-              <p class="hint" style="margin-top: 0;">写真は実習週ごとに整理され、Wordの表として出力できます。</p>
-              <button class="btn secondary" id="btn-open-gallery" style="width: 100%; border-style: dashed;">📸 アルバムを開く</button>
-            </div>
-          </section>
-        </div>
-      </div>
-
       <div class="page" id="page-checklist" data-page="checklist">
         <div class="page-header">
           <h1>卒業チェックリスト</h1>

@@ -602,7 +602,7 @@ textarea {
     bottom: 0;
     left: 0;
     right: 0;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     background: var(--surface);
     border-top: 1px solid var(--border);
     z-index: 20;
@@ -823,50 +823,6 @@ body.theme-aurora-stage .icon-checkin::before { content: '⭐'; }
 /* --- 🐾 獨立彩蛋：暖心柴柴版的圖示 (柴犬專屬！超可愛) --- */
 body.theme-shiba-gold .icon-settings::before { content: '🦴'; } /* 設定變成小骨頭！ */
 body.theme-shiba-gold .icon-checkin::before { content: '🐾'; }  /* 簽到變成小肉墊！ */
-
-.masonry-grid {
-  column-count: 3; /* 自動分三欄 */
-  column-gap: 15px;
-}
-
-.gallery-item {
-  margin-bottom: 15px;
-  break-inside: avoid;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-  transition: transform 0.3s;
-}
-
-.gallery-item img {
-  width: 100%;
-  display: block;
-}
-
-.gallery-item:hover {
-  transform: scale(1.03); /* 輕微放大效果 */
-  cursor: pointer;
-}
-
-/* --- 相簿畫廊排版樣式 --- */
-/* 隱藏區塊，直到開啟相簿時才顯示 */
-.gallery-modal-content {
-  display: none; /* 預設隱藏 */
-}
-
-/* 確保相簿在彈窗內能良好排版 */
-.gallery-filters { display: flex; gap: 10px; margin-bottom: 20px; }
-.masonry-grid { column-count: 2; column-gap: 15px; } /* 彈窗建議兩欄即可 */
-.filter-btn { padding: 6px 16px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
-.filter-btn.active, .filter-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
-
-.masonry-grid { column-count: 3; column-gap: 15px; }
-@media(max-width: 768px) { .masonry-grid { column-count: 2; } }
-
-.gallery-item { margin-bottom: 15px; break-inside: avoid; border-radius: 12px; overflow: hidden; position: relative; background: var(--surface); border: 1px solid var(--border); }
-.gallery-item img { width: 100%; display: block; }
-.gallery-item .overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px; background: rgba(0,0,0,0.6); color: white; font-size: 0.8rem; opacity: 0; transition: 0.3s; }
-.gallery-item:hover .overlay { opacity: 1; }
 
 /* ==========================================================================
    全新記帳介面樣式 (日期分組卡片 & FAB懸浮按鈕)

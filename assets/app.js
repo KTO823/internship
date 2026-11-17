@@ -13,12 +13,6 @@ const firebaseConfig = {
   appId: "1:997860315918:web:562eba719dcd16780f7d5f"
 };
 
-// 🌟 Cloudinary 免費圖床設定 —— 去 https://cloudinary.com 註冊後，
-// Dashboard 左上角看得到 Cloud name；Settings → Upload → Add upload preset，
-// Signing Mode 選「Unsigned」，把 preset 名稱貼在下面。兩個都不是密鑰，可以放在前端。
-const CLOUDINARY_CLOUD_NAME = 'eg9zs5ul';
-const CLOUDINARY_UPLOAD_PRESET = 'internship';
-
 // 🌟 網頁推播用的 VAPID 金鑰 —— Firebase 主控台 → 專案設定 → Cloud Messaging →
 // 「網頁設定」→ 產生金鑰組，把那串金鑰貼在這裡（這也不是密鑰，是公開金鑰）。
 const FCM_VAPID_KEY = 'BNf0YnsW4eqvsozpgUTkoBxhsMm1kys_TAiefS9aVUwWOQxkafs7BaKTrtgMnD9Sevg_obIDswrUZf6T-mYJ3Vs';
@@ -152,8 +146,6 @@ const APP = {
     punchRecords: {},   // 旧「日次打刻」データ（互換用・読み取りのみ）
     monthlyHours: {},   // 月次の勤務時間 { 'YYYY-MM': 時間 }
     expenses: [],
-    notes: [],
-    galleryImages: [], 
     checkInCount: 0,
     lastCheckInDate: '',
     checkInHistory: [], 
@@ -191,7 +183,6 @@ const APP = {
       this.state.currentExpenseMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
     if (!this.state.checkInHistory) this.state.checkInHistory = []; 
-    if (!this.state.galleryImages) this.state.galleryImages = [];
 
     this.applyTheme();
     this.renderAll();
@@ -410,32 +401,12 @@ const APP = {
       });
     }
 
-    const saveNoteBtn = document.getElementById('save-note');
-    if (saveNoteBtn) {
-      saveNoteBtn.addEventListener('click', () => {
-        const noteInput = document.getElementById('quick-note');
-        const text = noteInput.value.trim();
-        if (text) { 
-          this.state.notes.push({ id: Date.now(), text, date: this.getNowString() }); 
-          this.checkShibaEgg(text); 
-          noteInput.value = ''; 
-          this.saveState(); 
-          alert('メモを保存しました'); 
-        }
-      });
-    }
-
-    const clearNoteBtn = document.getElementById('clear-note');
-    if (clearNoteBtn) {
-      clearNoteBtn.addEventListener('click', () => { document.getElementById('quick-note').value = ''; });
-    }
-
     const addReminderBtn = document.getElementById('add-reminder');
     if (addReminderBtn) {
       addReminderBtn.addEventListener('click', () => {
         const title = document.getElementById('new-reminder-title').value.trim();
         const date = document.getElementById('new-reminder-date').value;
-        if (title && date) { this.state.reminders.push({ id: Date.now().toString(), title, date }); this.saveState(); this.renderReminders(); this.updateDashboard(); }
+        if (title && date) { this.checkShibaEgg(title); this.state.reminders.push({ id: Date.now().toString(), title, date }); this.saveState(); this.renderReminders(); this.updateDashboard(); }
       });
     }
 
@@ -445,15 +416,9 @@ const APP = {
     };
     
     bindModal('btn-manage-expense', 'expense');
-    bindModal('btn-manage-note', 'note');
     bindModal('btn-view-checkin-history', 'checkInHistory');
     bindModal('btn-manage-checklist', 'manageChecklist');
     bindModal('btn-export-expense-month', 'exportExpenseMonth');
-    
-    const btnOpenGallery = document.getElementById('btn-open-gallery');
-    if (btnOpenGallery) {
-      btnOpenGallery.addEventListener('click', () => this.openModal('gallery'));
-    }
     
     if (this.dom.modalClose) this.dom.modalClose.addEventListener('click', () => { this.dom.modal.classList.remove('active'); });
   },
@@ -467,13 +432,6 @@ const APP = {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   },
   
-  getWeekNum() { 
-    if (!this.state.startDate) return 1; // 実習開始日が未設定なら第1週として扱う
-    const msDiff = new Date() - new Date(this.state.startDate);
-    const weekNum = Math.floor(msDiff / 86400000 / 7) + 1; 
-    return weekNum > 0 ? weekNum : 1;
-  },
-
   // 支出が属する月（isoMonth が無い古いデータは日付から判定）
   getExpenseMonth(e) {
     return e.isoMonth || (e.date ? e.date.slice(0, 7) : '');
@@ -481,15 +439,6 @@ const APP = {
 
   formatYen(n) {
     return `￥${Number(n).toLocaleString('ja-JP')}`;
-  },
-
-  // 跟 getWeekNum() 邏輯一樣，但可以指定任何一個日期（例如照片的拍攝/上傳日），
-  // 用來把相簿照片依實習週次分類
-  getWeekNumForDate(dateStr) {
-    if (!this.state.startDate || !dateStr) return 1;
-    const msDiff = new Date(dateStr) - new Date(this.state.startDate);
-    const weekNum = Math.floor(msDiff / 86400000 / 7) + 1;
-    return weekNum > 0 ? weekNum : 1;
   },
 
   // ===== 勤務時間（月次記録） =====
@@ -602,6 +551,7 @@ const APP = {
   },
 
   addExpenseRecord(desc, amount, customDate = null, category = null) {
+    this.checkShibaEgg(desc);
     const targetDate = customDate || this.getTodayStr();
     const currentIsoMonth = targetDate.slice(0, 7);
     this.state.expenses.push({ 
@@ -760,11 +710,6 @@ const APP = {
           <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
             <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">💰</span> 
             <span><b style="white-space:nowrap;">家計簿</b>：支出をカテゴリ別に集計し、台湾ドルへ自動換算。</span>
-          </span>
-          
-          <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
-            <span style="font-size:1.2rem; margin-right:8px; width: 24px; text-align:center; flex-shrink:0;">📝</span> 
-            <span><b style="white-space:nowrap;">メモ・アルバム</b>：メモや写真を記録し、写真は週ごとにWordへ出力。</span>
           </span>
           
           <span style="display:flex; align-items:flex-start; margin-bottom:8px;">
@@ -1062,40 +1007,6 @@ const APP = {
     this.dom.modal.classList.add('active'); 
     this.dom.modalBody.innerHTML = '';
 
-    const renderGrouped = (items, dateExtractor, renderItemFn) => {
-      const grouped = {};
-      items.forEach(item => {
-        const month = dateExtractor(item);
-        if (!grouped[month]) grouped[month] = [];
-        grouped[month].push(item);
-      });
-      const sortedMonths = Object.keys(grouped).sort().reverse();
-      if (sortedMonths.length === 0) {
-        this.dom.modalBody.innerHTML = '<p style="text-align:center; color:gray; padding: 20px;">記録がありません</p>';
-        return;
-      }
-      sortedMonths.forEach((month, index) => {
-        const details = document.createElement('details');
-        if (index === 0) details.open = true;
-        details.style.marginBottom = '12px';
-        const summary = document.createElement('summary');
-        const [y, m] = month.split('-');
-        summary.style.cssText = 'font-size: 1.05rem; font-weight: 600; padding: 12px 16px; background: var(--primary-light); color: var(--primary); border-radius: 8px; cursor: pointer; outline: none; margin-bottom: 8px; list-style: none; display: flex; justify-content: space-between; align-items: center;';
-        summary.innerHTML = `<span>${y}年 ${parseInt(m)}月</span><span style="font-size: 0.8rem; opacity: 0.7;">▼ タップで開閉</span>`;
-        details.appendChild(summary);
-        const content = document.createElement('div');
-        content.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 0 4px 8px 4px;';
-        [...grouped[month]].reverse().forEach(item => { content.appendChild(renderItemFn(item)); });
-        details.appendChild(content);
-        this.dom.modalBody.appendChild(details);
-      });
-    };
-
-    const getMonthFromId = (id) => {
-      const d = new Date(Number(id));
-      return isNaN(d.getTime()) ? '未分類' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    };
-
     // ⬇️ 處理點擊 FAB 跳出的「新增記帳」彈窗
     if (type === 'addExpense') {
       this.dom.modalTitle.textContent = '支出を追加';
@@ -1366,15 +1277,6 @@ const APP = {
       };
       this.dom.modalBody.appendChild(addBtn);
 
-    } else if (type === 'note') {
-      this.dom.modalTitle.textContent = '過去のメモ（月別）';
-      const targetArr = this.state.notes.map((item, idx) => ({ ...item, _idx: idx }));
-      renderGrouped(targetArr, item => getMonthFromId(item.id), (item) => {
-        const div = document.createElement('div'); div.className = 'history-card';
-        div.innerHTML = `<p><span style="font-size:0.8rem; color:gray;">${escapeHtml(item.date || '')}</span></p><p style="white-space:pre-wrap;">${escapeHtml(item.text || '')}</p><div class="history-actions"><button class="btn btn-sm danger" onclick="APP.deleteItem('notes', ${item._idx}, 'note')">削除</button></div>`;
-        return div;
-      });
-
     } else if (type === 'manageChecklist') {
       this.dom.modalTitle.textContent = '📋 学校指定書類リストの管理';
       this.dom.modalBody.innerHTML = '';
@@ -1420,128 +1322,6 @@ const APP = {
       };
       this.dom.modalBody.appendChild(addBtn);
 
-    } else if (type === 'gallery') {
-      this.dom.modalTitle.textContent = '📸 実習アルバム';
-      this.dom.modalBody.innerHTML = `
-        <div style="margin-bottom: 20px; display:flex; gap: 10px; flex-wrap: wrap;">
-            <input type="file" id="image-upload" accept="image/*" multiple style="display:none">
-            <button class="btn" onclick="document.getElementById('image-upload').click()">写真を追加</button>
-            <button class="btn secondary" id="export-gallery">📥 Wordに出力（週ごと）</button>
-        </div>
-        <div id="upload-progress-container" style="display:none; margin-bottom: 20px;">
-            <div class="progress-bar" style="background: rgba(0,0,0,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
-                <span id="upload-progress-bar" style="display: block; height: 100%; width: 0%; background: var(--primary); transition: width 0.3s;"></span>
-            </div>
-            <p id="upload-status" style="font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top: 8px;">準備中...</p>
-        </div>
-        <div id="modal-gallery-groups"></div>
-      `;
-
-      const groupsContainer = document.getElementById('modal-gallery-groups');
-      const images = this.state.galleryImages || [];
-      if (images.length === 0) {
-        groupsContainer.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 20px 0;">まだ写真がありません。「写真を追加」から最初の1枚を追加しましょう！</p>';
-      } else {
-        // 依實習週次分組；沒有 week 欄位的舊照片，用當初上傳日期回推所屬週次
-        const byWeek = {};
-        images.forEach((img, idx) => {
-          const week = parseInt(img.week) || this.getWeekNumForDate(img.date);
-          if (!byWeek[week]) byWeek[week] = [];
-          byWeek[week].push({ ...img, idx });
-        });
-        const weekKeys = Object.keys(byWeek).map(Number).sort((a, b) => a - b);
-
-        groupsContainer.innerHTML = weekKeys.map((week) => {
-          const cards = byWeek[week].map((img) => `
-            <div class="gallery-item" style="margin-bottom: 15px; border-radius: 12px; overflow: hidden; position: relative; border: 1px solid var(--border); break-inside: avoid;">
-              <img src="${img.url}" style="width: 100%; display: block;" alt="実習の写真">
-              <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 6px; font-size: 0.75rem;">
-                ${img.date}
-                <button class="btn-icon" onclick="APP.deleteItem('galleryImages', ${img.idx}, 'gallery')" style="float:right; background:none; border:none; color:var(--danger); font-size:1.1rem; cursor:pointer;">🗑️</button>
-              </div>
-            </div>`).join('');
-          return `
-            <div class="gallery-week-group" style="margin-bottom: 24px;">
-              <h3 style="font-size: 0.95rem; color: var(--text-muted); margin: 0 0 12px;">第${week}週</h3>
-              <div class="masonry-grid" style="column-count: 2; column-gap: 15px;">${cards}</div>
-            </div>`;
-        }).join('');
-      }
-
-      const exportGalleryBtn = document.getElementById('export-gallery');
-      if (exportGalleryBtn) exportGalleryBtn.addEventListener('click', () => this.exportGalleryToWord());
-
-      document.getElementById('image-upload').addEventListener('change', (e) => {
-        const files = e.target.files;
-        if (files.length === 0) return;
-
-        if (!this.firebaseUser) {
-          alert('🚨 エラー：先に設定ページでGoogleアカウントにログインしてください！');
-          return;
-        }
-
-        if (CLOUDINARY_CLOUD_NAME.includes('請填入')) {
-          alert('🚨 Cloudinaryが未設定です。app.js の先頭にある CLOUDINARY_CLOUD_NAME と CLOUDINARY_UPLOAD_PRESET を入力してください。');
-          return;
-        }
-
-        const progressContainer = document.getElementById('upload-progress-container');
-        const progressBar = document.getElementById('upload-progress-bar');
-        const statusText = document.getElementById('upload-status');
-
-        progressContainer.style.display = 'block';
-        let completedCount = 0;
-
-        Array.from(files).forEach((file, index) => {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-          // 用資料夾把每個使用者的照片分開放，方便之後管理
-          formData.append('folder', `intern-app/${this.firebaseUser.uid}`);
-
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`);
-
-          xhr.upload.addEventListener('progress', (evt) => {
-            if (!evt.lengthComputable) return;
-            const progress = (evt.loaded / evt.total) * 100;
-            progressBar.style.width = `${progress}%`;
-            statusText.textContent = `${index + 1}枚目をアップロード中 (${Math.round(progress)}%)`;
-          });
-
-          xhr.onload = () => {
-            if (xhr.status < 200 || xhr.status >= 300) {
-              console.error('[上傳失敗詳細資訊]:', xhr.responseText);
-              alert(`アップロードに失敗しました。\nHTTP ${xhr.status}\nCloudinaryの Cloud name / Upload preset が正しいか、presetが Unsigned になっているか確認してください。`);
-              progressContainer.style.display = 'none';
-              return;
-            }
-            try {
-              const data = JSON.parse(xhr.responseText);
-              this.state.galleryImages = this.state.galleryImages || [];
-              this.state.galleryImages.push({ url: data.secure_url, date: this.getNowString(), week: this.getWeekNum() });
-              this.saveState();
-
-              completedCount++;
-              if (completedCount === files.length) {
-                statusText.textContent = 'すべてのアップロードが完了しました！';
-                setTimeout(() => { this.openModal('gallery'); }, 1000);
-              }
-            } catch (parseErr) {
-              console.error('[解析回應失敗]:', parseErr);
-              alert('写真はアップロードされましたが、表示用のURLを取得できませんでした。');
-            }
-          };
-
-          xhr.onerror = () => {
-            console.error('[網路錯誤]: Cloudinary 上傳失敗');
-            alert('アップロードに失敗しました：ネットワークエラーです。接続を確認してもう一度お試しください。');
-            progressContainer.style.display = 'none';
-          };
-
-          xhr.send(formData);
-        });
-      });
     }
   },
 
@@ -1549,11 +1329,6 @@ const APP = {
     if (confirm('削除してもよろしいですか？')) { this.state[arrayName].splice(index, 1); this.saveState(); this.renderAll(); if (modalToReopen) this.openModal(modalToReopen); } 
   },
   
-  editTextItem(arrayName, index, modalToReopen) { 
-    const newText = prompt('内容を編集してください：', this.state[arrayName][index].text); 
-    if (newText) { this.state[arrayName][index].text = newText; this.saveState(); this.renderAll(); this.openModal(modalToReopen); } 
-  },
-
   editReminder(index) { 
     const r = this.state.reminders[index]; 
     const newTitle = prompt('リマインダー名を編集：', r.title); if (newTitle) r.title = newTitle; 
@@ -1588,103 +1363,6 @@ const APP = {
     this.renderChecklist();
     this.updateDashboard();
     this.openModal('manageChecklist'); // 修改完自動重新整理彈窗
-  },
-
-  // 把每張圖片抓下來轉成 base64，這樣存成的 .doc 檔案本身就包含完整照片，
-  // 之後就算網路斷線、Cloudinary 網址失效，開啟舊檔案還是看得到照片。
-  async _urlToBase64(url) {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  },
-
-  async exportGalleryToWord() {
-    const images = this.state.galleryImages || [];
-    if (images.length === 0) {
-      alert('出力できる写真がまだありません。');
-      return;
-    }
-
-    const exportBtn = document.getElementById('export-gallery');
-    const originalLabel = exportBtn ? exportBtn.textContent : '';
-    if (exportBtn) { exportBtn.disabled = true; exportBtn.textContent = '変換中です。しばらくお待ちください...'; }
-
-    try {
-      // 1. 依週次分組
-      const byWeek = {};
-      images.forEach((img) => {
-        const week = parseInt(img.week) || this.getWeekNumForDate(img.date);
-        if (!byWeek[week]) byWeek[week] = [];
-        byWeek[week].push(img);
-      });
-      const weekKeys = Object.keys(byWeek).map(Number).sort((a, b) => a - b);
-
-      // 2. 把每張圖轉成 base64（平行處理，加快速度）
-      const base64Cache = {};
-      await Promise.all(images.map(async (img) => {
-        try {
-          base64Cache[img.url] = await this._urlToBase64(img.url);
-        } catch (e) {
-          console.error('圖片轉換失敗：', img.url, e);
-          base64Cache[img.url] = null;
-        }
-      }));
-
-      // 3. 組成一週一列的表格
-      const rows = weekKeys.map((week) => {
-        const cellImages = byWeek[week].map((img) => {
-          const src = base64Cache[img.url];
-          if (!src) return `<p style="color:#999;">（這張照片轉換失敗：${img.date}）</p>`;
-          return `<img src="${src}" style="width:220px; margin:6px; border:1px solid #ccc;"><br><span style="font-size:9pt; color:#666;">${img.date}</span>`;
-        }).join('');
-        return `
-          <tr>
-            <td style="border:1px solid black; padding:10px; width:80px; vertical-align:top; font-weight:normal;">第 ${week} 週</td>
-            <td style="border:1px solid black; padding:10px; vertical-align:top;">${cellImages}</td>
-          </tr>`;
-      }).join('');
-
-      const html = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head>
-          <meta charset='utf-8'>
-          <title>實習相簿</title>
-          <style>
-            @page { margin: 2.0cm; }
-            body { font-family: "標楷體", "DFKai-SB", serif; font-weight: normal; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid black; font-weight: normal; }
-            th { background-color: #e0e0e0; text-align: center; padding: 8px; }
-          </style>
-        </head>
-        <body>
-          <table>
-            <tr><th>週次</th><th>照片</th></tr>
-            ${rows}
-          </table>
-        </body>
-        </html>
-      `;
-
-      const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = '實習相簿_依週次.doc';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (e) {
-      console.error('匯出相簿失敗：', e);
-      alert('出力に失敗しました。ネットワーク接続を確認してもう一度お試しください。');
-    } finally {
-      if (exportBtn) { exportBtn.disabled = false; exportBtn.textContent = originalLabel; }
-    }
   },
 
   async saveState() { 
